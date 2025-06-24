@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sepuh TCG</title>
+  <title>Sepuh TCG – Turn Battle</title>
   <link rel="stylesheet" href="style.css" />
   <style>
     body {
@@ -26,25 +26,23 @@
       margin-top: 1rem;
     }
 
-    #battlefield {
+    .card-grid {
       display: flex;
       justify-content: center;
-      align-items: flex-start;
-      margin-top: 2rem;
-      gap: 2rem;
+      gap: 1rem;
       flex-wrap: wrap;
+      margin-top: 1rem;
     }
 
-    .player-wrapper, .cpu-wrapper {
+    .card-section {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.5rem;
     }
 
     .label {
       font-weight: bold;
-      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
     }
 
     .card {
@@ -52,7 +50,8 @@
       padding: 1rem;
       border-radius: 8px;
       width: 200px;
-      animation: flipIn 0.6s ease both;
+      transition: transform 0.3s;
+      cursor: pointer;
     }
 
     .card img {
@@ -60,11 +59,23 @@
       border-radius: 4px;
     }
 
+    .card:hover {
+      transform: scale(1.05);
+    }
+
+    #battlefield {
+      display: none;
+      justify-content: center;
+      align-items: flex-start;
+      margin-top: 2rem;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
     #result {
       font-size: 1.5rem;
       margin-top: 1.5rem;
       padding: 1rem;
-      background: #333;
       border-radius: 8px;
       display: inline-block;
     }
@@ -83,36 +94,35 @@
       background: #f1c40f;
       color: #000;
     }
-
-    @keyframes flipIn {
-      from {
-        opacity: 0;
-        transform: rotateY(90deg) scale(0.95);
-      }
-      to {
-        opacity: 1;
-        transform: rotateY(0deg) scale(1);
-      }
-    }
   </style>
 </head>
 <body>
-  <h1>🧓 Sepuh TCG</h1>
-  <button onclick="playGame()">Draw Card</button>
+  <h1>🧓 Sepuh TCG – Deck Battle</h1>
+
+  <audio id="bg-music" src="audio/battle.mp3" loop></audio>
+  <audio id="click-sound" src="audio/click.mp3"></audio>
+  <audio id="win-sound" src="audio/win.mp3"></audio>
+  <audio id="lose-sound" src="audio/lose.mp3"></audio>
+
+  <button id="start-btn" onclick="startGame()">Mulai Game 🎮</button>
+
+  <h2>Pilih Kartu:</h2>
+  <div id="deck" class="card-grid"></div>
 
   <div id="battlefield">
-    <div class="player-wrapper">
+    <div class="card-section">
       <div class="label">🧍 Player</div>
       <div id="player-card" class="card"></div>
     </div>
     <div id="vs"><h2>VS</h2></div>
-    <div class="cpu-wrapper">
+    <div class="card-section">
       <div class="label">🤖 Bot</div>
       <div id="cpu-card" class="card"></div>
     </div>
   </div>
 
   <h2 id="result"></h2>
+  <button id="reset-btn" style="display:none;" onclick="resetGame()">Main Lagi 🔁</button>
 
   <script src="data.js"></script>
   <script src="script.js"></script>
