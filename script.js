@@ -2,15 +2,10 @@ let allCards = [];
 let playerDeck = [];
 let cpuDeck = [];
 let selectedCards = [];
-let round = 1;
-let maxRounds = 3;
-let playerScore = 0;
-let cpuScore = 0;
-
+let playerIndex = 0;
+let cpuIndex = 0;
 let playerHP = 0;
 let cpuHP = 0;
-let playerCardCurrent = null;
-let cpuCardCurrent = null;
 let isBattling = false;
 
 function playSound(id) {
@@ -37,11 +32,24 @@ function renderCard(card, targetId, overrideHP = null) {
     <img src="${card.image}" alt="${card.name}" />
     <h3>${card.name}</h3>
     <p>${card.description}</p>
-    <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${card.hp}</p>
+    <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${hp}</p>
     <div class="hp-bar-container">
-      <div class="hp-bar ${hpClass}" style="width: ${hpPercent}%;" id="${targetId}-hpbar"></div>
+      <div class="hp-bar ${hpClass}" style="width: ${hpPercent}%" id="${targetId}-hpbar"></div>
     </div>
   `;
+}
+
+function updateHPBar(targetId, newHP) {
+  const bar = document.getElementById(`${targetId}-hpbar`);
+  const percent = Math.max(0, Math.min(100, newHP));
+  let hpClass = "hp-high";
+  if (percent <= 60) hpClass = "hp-medium";
+  if (percent <= 30) hpClass = "hp-low";
+
+  if (bar) {
+    bar.style.width = percent + "%";
+    bar.className = `hp-bar ${hpClass}`;
+  }
 }
 
 function startGame() {
@@ -91,129 +99,85 @@ function showCardSelection() {
 function confirmDeck() {
   playerDeck = selectedCards;
   cpuDeck = drawRandomDeck(3);
-  round = 1;
-  playerScore = 0;
-  cpuScore = 0;
-  document.getElementById("deck").style.display = "flex";
+  playerIndex = 0;
+  cpuIndex = 0;
+  document.getElementById("deck").style.display = "none";
   document.getElementById("confirm-deck-btn").style.display = "none";
-  document.getElementById("round-info").textContent = `Ronde: 1 / ${maxRounds}`;
-  startNextDuel();
-}
-
-function startNextDuel() {
-  document.getElementById("result").textContent = "";
-  document.getElementById("next-btn").style.display = "none";
-  document.getElementById("battlefield").style.display = "none";
-
-  const playerCard = playerDeck[round - 1];
-  const cpuCard = cpuDeck[round - 1];
-
-  startDuel(playerCard, cpuCard);
-}
-
-function startDuel(playerCard, cpuCard) {
-  isBattling = true;
-  playerCardCurrent = playerCard;
-  cpuCardCurrent = cpuCard;
-  playerHP = playerCard.hp;
-  cpuHP = cpuCard.hp;
-
-  renderCard(playerCard, "player-card", playerHP);
-  renderCard(cpuCard, "cpu-card", cpuHP);
   document.getElementById("battlefield").style.display = "flex";
+  document.getElementById("result").textContent = "";
+  startSurvivalDuel();
+}
 
+function startSurvivalDuel() {
+  playerHP = playerDeck[playerIndex].hp;
+  cpuHP = cpuDeck[cpuIndex].hp;
+  renderCard(playerDeck[playerIndex], "player-card", playerHP);
+  renderCard(cpuDeck[cpuIndex], "cpu-card", cpuHP);
+  isBattling = true;
   setTimeout(() => duelTurn(), 1000);
 }
 
 function duelTurn() {
   if (!isBattling) return;
 
-  // Player menyerang bot
-  cpuHP = Math.max(0, cpuHP - playerCardCurrent.attack);
+  // Player attack
+  cpuHP = Math.max(0, cpuHP - playerDeck[playerIndex].attack);
   updateHPBar("cpu-card", cpuHP);
+
   if (cpuHP <= 0) {
-    endDuel("player");
-    return;
+    cpuIndex++;
+    if (cpuIndex >= cpuDeck.length) {
+      declareVictory("player");
+      return;
+    }
+    cpuHP = cpuDeck[cpuIndex].hp;
+    renderCard(cpuDeck[cpuIndex], "cpu-card", cpuHP);
   }
 
   setTimeout(() => {
-    // Bot menyerang player
-    playerHP = Math.max(0, playerHP - cpuCardCurrent.attack);
+    // CPU attack
+    playerHP = Math.max(0, playerHP - cpuDeck[cpuIndex].attack);
     updateHPBar("player-card", playerHP);
 
     if (playerHP <= 0) {
-      endDuel("cpu");
-    } else {
-      setTimeout(() => duelTurn(), 800);
+      playerIndex++;
+      if (playerIndex >= playerDeck.length) {
+        declareVictory("cpu");
+        return;
+      }
+      playerHP = playerDeck[playerIndex].hp;
+      renderCard(playerDeck[playerIndex], "player-card", playerHP);
     }
+
+    setTimeout(() => duelTurn(), 800);
   }, 800);
 }
 
-function updateHPBar(targetId, newHP) {
-  const bar = document.getElementById(`${targetId}-hpbar`);
-  const percent = Math.max(0, Math.min(100, newHP));
-  let hpClass = "hp-high";
-  if (percent <= 60) hpClass = "hp-medium";
-  if (percent <= 30) hpClass = "hp-low";
-
-  if (bar) {
-    bar.style.width = percent + "%";
-    bar.className = `hp-bar ${hpClass}`;
-  }
-}
-
-function endDuel(winner) {
+function declareVictory(winner) {
   isBattling = false;
   const resultBox = document.getElementById("result");
   resultBox.className = "";
-
   if (winner === "player") {
-    resultBox.textContent = "🏆 Kamu Menang Ronde Ini!";
+    resultBox.textContent = "🏆 Kamu Menang!";
     resultBox.classList.add("win");
     playSound("win-sound");
-    playerScore++;
   } else {
-    resultBox.textContent = "💀 Kamu Kalah Ronde Ini!";
+    resultBox.textContent = "💀 Kamu Kalah!";
     resultBox.classList.add("lose");
     playSound("lose-sound");
-    cpuScore++;
   }
-
-  if (round < maxRounds) {
-    document.getElementById("next-btn").style.display = "inline-block";
-  } else {
-    showFinalScore();
-  }
-}
-
-function nextRound() {
-  round++;
-  document.getElementById("deck").style.display = "flex";
-  startNextDuel();
+  document.getElementById("reset-btn").style.display = "inline-block";
 }
 
 function resetGame() {
-  round = 1;
-  playerScore = 0;
-  cpuScore = 0;
   playerDeck = [];
   cpuDeck = [];
+  playerIndex = 0;
+  cpuIndex = 0;
   document.getElementById("deck").style.display = "flex";
   document.getElementById("result").textContent = "";
   document.getElementById("reset-btn").style.display = "none";
-  document.getElementById("final-score").style.display = "none";
-  document.getElementById("next-btn").style.display = "none";
+  document.getElementById("battlefield").style.display = "none";
   document.getElementById("confirm-deck-btn").style.display = "none";
-  document.getElementById("round-info").textContent = `Ronde: 1 / ${maxRounds}`;
   showCardSelection();
-}
-
-function showFinalScore() {
-  const scoreText = `🏁 Skor Akhir: ${playerScore} - ${cpuScore}`;
-  const finalText = (playerScore > cpuScore) ? "🏆 Kamu Menang!" :
-                    (playerScore < cpuScore) ? "💀 Kamu Kalah!" :
-                    "⚔️ Imbang!";
-  document.getElementById("final-score").textContent = `${scoreText} → ${finalText}`;
-  document.getElementById("final-score").style.display = "block";
-  document.getElementById("reset-btn").style.display = "inline-block";
 }
