@@ -5,6 +5,12 @@ let maxRounds = 3;
 let playerScore = 0;
 let cpuScore = 0;
 
+let playerHP = 0;
+let cpuHP = 0;
+let playerCardCurrent = null;
+let cpuCardCurrent = null;
+let isBattling = false;
+
 function playSound(id) {
   const sound = document.getElementById(id);
   if (sound) {
@@ -39,9 +45,7 @@ function renderCard(card, targetId, overrideHP = null) {
 function startGame() {
   const music = document.getElementById("bg-music");
   music.volume = 0.2;
-  music.play().catch(() => {
-    alert("Klik dibutuhkan untuk memutar musik.");
-  });
+  music.play().catch(() => alert("Klik dibutuhkan untuk memutar musik."));
 
   document.getElementById("start-btn").style.display = "none";
   resetGame();
@@ -64,46 +68,82 @@ function createDeck() {
     cardDiv.onclick = () => {
       playSound("click-sound");
       document.getElementById("deck").style.display = "none";
-      battle(card, cpuDeck[round - 1]);
+      startDuel(card, cpuDeck[round - 1]);
     };
     deckContainer.appendChild(cardDiv);
   });
 }
 
-function battle(playerCard, cpuCard) {
-  renderCard(playerCard, "player-card");
-  renderCard(cpuCard, "cpu-card");
+function startDuel(playerCard, cpuCard) {
+  isBattling = true;
+  playerCardCurrent = playerCard;
+  cpuCardCurrent = cpuCard;
+  playerHP = playerCard.hp;
+  cpuHP = cpuCard.hp;
 
-  const playerScoreThisRound = playerCard.attack + playerCard.hp;
-  const cpuScoreThisRound = cpuCard.attack + cpuCard.hp;
+  renderCard(playerCard, "player-card", playerHP);
+  renderCard(cpuCard, "cpu-card", cpuHP);
+  document.getElementById("battlefield").style.display = "flex";
+  document.getElementById("round-info").textContent = `Ronde: ${round} / ${maxRounds}`;
+  document.getElementById("result").textContent = "";
 
+  setTimeout(() => duelTurn(), 1000);
+}
+
+function duelTurn() {
+  if (!isBattling) return;
+
+  // Player menyerang bot
+  cpuHP = Math.max(0, cpuHP - playerCardCurrent.attack);
+  updateHPBar("cpu-card", cpuHP);
+  if (cpuHP <= 0) {
+    endDuel("player");
+    return;
+  }
+
+  // Delay lalu bot menyerang player
+  setTimeout(() => {
+    playerHP = Math.max(0, playerHP - cpuCardCurrent.attack);
+    updateHPBar("player-card", playerHP);
+
+    if (playerHP <= 0) {
+      endDuel("cpu");
+    } else {
+      // Lanjut giliran berikutnya
+      setTimeout(() => duelTurn(), 800);
+    }
+  }, 800);
+}
+
+function updateHPBar(targetId, newHP) {
+  const bar = document.getElementById(`${targetId}-hpbar`);
+  const percent = Math.max(0, Math.min(100, newHP));
+  let hpClass = "hp-high";
+  if (percent <= 60) hpClass = "hp-medium";
+  if (percent <= 30) hpClass = "hp-low";
+
+  if (bar) {
+    bar.style.width = percent + "%";
+    bar.className = `hp-bar ${hpClass}`;
+  }
+}
+
+function endDuel(winner) {
+  isBattling = false;
   const resultBox = document.getElementById("result");
   resultBox.className = "";
 
-  if (playerScoreThisRound > cpuScoreThisRound) {
+  if (winner === "player") {
     resultBox.textContent = "🏆 Kamu Menang Ronde Ini!";
     resultBox.classList.add("win");
     playSound("win-sound");
     playerScore++;
-  } else if (playerScoreThisRound < cpuScoreThisRound) {
+  } else {
     resultBox.textContent = "💀 Kamu Kalah Ronde Ini!";
     resultBox.classList.add("lose");
     playSound("lose-sound");
     cpuScore++;
-  } else {
-    resultBox.textContent = "⚔️ Seri!";
-    resultBox.classList.add("draw");
-    playSound("draw-sound");
   }
-
-  document.getElementById("round-info").textContent = `Ronde: ${round} / ${maxRounds}`;
-  document.getElementById("battlefield").style.display = "flex";
-
-  // Simulasi HP bot berkurang 30
-  const newCPUHP = Math.max(0, cpuCard.hp - 30);
-  setTimeout(() => {
-    renderCard(cpuCard, "cpu-card", newCPUHP);
-  }, 1000);
 
   if (round < maxRounds) {
     document.getElementById("next-btn").style.display = "inline-block";
