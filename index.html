@@ -4,113 +4,27 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Sepuh TCG – Turn Battle</title>
+  
+  <!-- 🔗 Link ke file CSS eksternal yang sudah mengatur background PNG -->
   <link rel="stylesheet" href="style.css" />
-  <style>
-    body {
-      background: #111;
-      color: #fff;
-      font-family: sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 2rem;
-    }
-
-    button {
-      background: #28a745;
-      color: white;
-      border: none;
-      padding: 1rem 2rem;
-      font-size: 1rem;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-top: 1rem;
-    }
-
-    .card-grid {
-      display: flex;
-      justify-content: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-      margin-top: 1rem;
-    }
-
-    .card-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .label {
-      font-weight: bold;
-      margin-bottom: 0.5rem;
-    }
-
-    .card {
-      background: #222;
-      padding: 1rem;
-      border-radius: 8px;
-      width: 200px;
-      transition: transform 0.3s;
-      cursor: pointer;
-    }
-
-    .card img {
-      width: 100%;
-      border-radius: 4px;
-    }
-
-    .card:hover {
-      transform: scale(1.05);
-    }
-
-    #battlefield {
-      display: none;
-      justify-content: center;
-      align-items: flex-start;
-      margin-top: 2rem;
-      gap: 2rem;
-      flex-wrap: wrap;
-    }
-
-    #result {
-      font-size: 1.5rem;
-      margin-top: 1.5rem;
-      padding: 1rem;
-      border-radius: 8px;
-      display: inline-block;
-    }
-
-    .win {
-      background: #2ecc71;
-      color: #000;
-    }
-
-    .lose {
-      background: #e74c3c;
-      color: #000;
-    }
-
-    .draw {
-      background: #f1c40f;
-      color: #000;
-    }
-  </style>
 </head>
 <body>
   <h1>🧓 Sepuh TCG – Deck Battle</h1>
 
+  <!-- 🔊 Semua audio -->
   <audio id="bg-music" src="audio/battle.mp3" loop></audio>
   <audio id="click-sound" src="audio/click.mp3"></audio>
   <audio id="win-sound" src="audio/win.mp3"></audio>
   <audio id="lose-sound" src="audio/lose.mp3"></audio>
   <audio id="draw-sound" src="audio/draw.mp3"></audio>
 
-
+  <!-- 🎮 Tombol mulai game untuk trigger musik dan tampilkan deck -->
   <button id="start-btn" onclick="startGame()">Mulai Game 🎮</button>
 
   <h2>Pilih Kartu:</h2>
   <div id="deck" class="card-grid"></div>
 
+  <!-- 🧱 Arena pertarungan -->
   <div id="battlefield">
     <div class="card-section">
       <div class="label">🧍 Player</div>
@@ -123,9 +37,11 @@
     </div>
   </div>
 
+  <!-- 🏆 Hasil & tombol ulang -->
   <h2 id="result"></h2>
   <button id="reset-btn" style="display:none;" onclick="resetGame()">Main Lagi 🔁</button>
 
+  <!-- 📜 Script data dan logika -->
   <script src="data.js"></script>
   <script src="script.js"></script>
 </body>
