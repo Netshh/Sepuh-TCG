@@ -40,6 +40,7 @@ function battle(player, cpu) {
   } else {
     resultBox.textContent = "⚔️ Seri!";
     resultBox.classList.add("draw");
+    playSound("draw-sound");
   }
 
   document.getElementById("battlefield").style.display = "flex";
