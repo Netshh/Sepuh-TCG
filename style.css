@@ -1,4 +1,6 @@
+/* 🔥 LATAR BELAKANG GAMBAR PNG */
 body {
+  position: relative; /* Wajib agar overlay bisa z-index dengan baik */
   background: url("assets/bg-sepuh-reunion.png?v=1") no-repeat center center fixed;
   background-size: cover;
   color: #fff;
@@ -8,24 +10,27 @@ body {
   padding: 2rem;
 }
 
-/* Overlay gelap agar teks tetap terlihat */
+/* 🔲 OVERLAY GELAP SUPAYA TEKS TETAP TERLIHAT */
 body::before {
   content: "";
   position: fixed;
   top: 0; left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5); /* transparan, bukan nutup total */
   z-index: -1;
 }
 
+/* DECK PILIHAN */
 .card-grid {
   display: flex;
   justify-content: center;
   gap: 1rem;
   flex-wrap: wrap;
+  margin-top: 1rem;
 }
 
+/* ARENA PERTARUNGAN */
 .card-section {
   display: flex;
   flex-direction: column;
@@ -37,6 +42,7 @@ body::before {
   margin-bottom: 0.5rem;
 }
 
+/* KARTU */
 .card {
   background: #222;
   padding: 1rem;
@@ -55,6 +61,7 @@ body::before {
   transform: scale(1.05);
 }
 
+/* HASIL BATTLE */
 #result {
   font-size: 1.5rem;
   margin-top: 1.5rem;
