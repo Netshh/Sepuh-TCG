@@ -11,9 +11,11 @@ function renderCard(card, targetId) {
     <p>${card.description}</p>
     <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${card.hp}</p>
   `;
-  target.classList.remove("flip");
-  void target.offsetWidth; // force reflow
-  target.classList.add("flip");
+
+  // Restart animation
+  target.classList.remove("card");
+  void target.offsetWidth; // trigger reflow
+  target.classList.add("card");
 }
 
 function playGame() {
