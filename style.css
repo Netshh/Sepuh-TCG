@@ -1,6 +1,6 @@
-/* 🔥 LATAR BELAKANG GAMBAR PNG */
+/* 🔥 BACKGROUND GAMBAR CUSTOM */
 body {
-  position: relative; /* Wajib agar overlay bisa z-index dengan baik */
+  position: relative;
   background: url("assets/bg-sepuh-reunion.png?v=1") no-repeat center center fixed;
   background-size: cover;
   color: #fff;
@@ -17,11 +17,11 @@ body::before {
   top: 0; left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.5); /* transparan, bukan nutup total */
+  background: rgba(0, 0, 0, 0.5);
   z-index: -1;
 }
 
-/* DECK PILIHAN */
+/* 🎮 DECK PILIHAN */
 .card-grid {
   display: flex;
   justify-content: center;
@@ -30,7 +30,17 @@ body::before {
   margin-top: 1rem;
 }
 
-/* ARENA PERTARUNGAN */
+/* 🧱 AREA ARENA BATTLE */
+#battlefield {
+  display: none;
+  justify-content: center;
+  align-items: flex-start;
+  margin-top: 2rem;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+/* 🔖 WRAPPER KARTU */
 .card-section {
   display: flex;
   flex-direction: column;
@@ -42,7 +52,7 @@ body::before {
   margin-bottom: 0.5rem;
 }
 
-/* KARTU */
+/* 🎴 KARTU */
 .card {
   background: #222;
   padding: 1rem;
@@ -61,7 +71,7 @@ body::before {
   transform: scale(1.05);
 }
 
-/* HASIL BATTLE */
+/* 🏆 HASIL BATTLE */
 #result {
   font-size: 1.5rem;
   margin-top: 1.5rem;
@@ -74,10 +84,12 @@ body::before {
   background: #2ecc71;
   color: #000;
 }
+
 .lose {
   background: #e74c3c;
   color: #000;
 }
+
 .draw {
   background: #f1c40f;
   color: #000;
