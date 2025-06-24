@@ -1,7 +1,8 @@
-let allCards = [];
+let draftPool = [];
 let playerDeck = [];
 let cpuDeck = [];
-let selectedCards = [];
+let isPlayerTurn = true;
+let isDrafting = true;
 let playerIndex = 0;
 let cpuIndex = 0;
 let playerHP = 0;
@@ -16,7 +17,7 @@ function playSound(id) {
   }
 }
 
-function drawRandomDeck(count) {
+function drawDraftPool(count) {
   return [...cards].sort(() => 0.5 - Math.random()).slice(0, count);
 }
 
@@ -32,7 +33,7 @@ function renderCard(card, targetId, overrideHP = null) {
     <img src="${card.image}" alt="${card.name}" />
     <h3>${card.name}</h3>
     <p>${card.description}</p>
-    <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${hp}</p>
+    <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${card.hp}</p>
     <div class="hp-bar-container">
       <div class="hp-bar ${hpClass}" style="width: ${hpPercent}%" id="${targetId}-hpbar"></div>
     </div>
@@ -58,16 +59,23 @@ function startGame() {
   music.play().catch(() => alert("Klik dibutuhkan untuk memutar musik."));
 
   document.getElementById("start-btn").style.display = "none";
-  showCardSelection();
+  startDraft();
 }
 
-function showCardSelection() {
+function startDraft() {
+  draftPool = drawDraftPool(10);
+  playerDeck = [];
+  cpuDeck = [];
+  isDrafting = true;
+  isPlayerTurn = true;
+  renderDraftPool();
+}
+
+function renderDraftPool() {
   const deckContainer = document.getElementById("deck");
   deckContainer.innerHTML = "";
-  allCards = drawRandomDeck(5);
-  selectedCards = [];
 
-  allCards.forEach((card, index) => {
+  draftPool.forEach((card, index) => {
     const cardDiv = document.createElement("div");
     cardDiv.className = "card";
     cardDiv.innerHTML = `
@@ -76,39 +84,78 @@ function showCardSelection() {
       <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${card.hp}</p>
     `;
 
-    cardDiv.onclick = () => {
-      if (selectedCards.includes(card)) {
-        selectedCards = selectedCards.filter(c => c !== card);
-        cardDiv.style.border = "";
-      } else {
-        if (selectedCards.length >= 3) {
-          alert("Kamu hanya bisa memilih 3 kartu!");
-          return;
-        }
-        selectedCards.push(card);
-        cardDiv.style.border = "3px solid lime";
-      }
-
-      document.getElementById("confirm-deck-btn").style.display = (selectedCards.length === 3) ? "inline-block" : "none";
-    };
+    if (isDrafting && isPlayerTurn) {
+      cardDiv.onclick = () => {
+        pickCard(index, 'player');
+      };
+    }
 
     deckContainer.appendChild(cardDiv);
   });
+
+  updateDraftStatus();
 }
 
-function confirmDeck() {
-  playerDeck = selectedCards;
-  cpuDeck = drawRandomDeck(3);
-  playerIndex = 0;
-  cpuIndex = 0;
-  document.getElementById("deck").style.display = "none";
-  document.getElementById("confirm-deck-btn").style.display = "none";
-  document.getElementById("battlefield").style.display = "flex";
-  document.getElementById("result").textContent = "";
-  startSurvivalDuel();
+function pickCard(index, who) {
+  const chosen = draftPool.splice(index, 1)[0];
+  if (who === 'player') playerDeck.push(chosen);
+  else cpuDeck.push(chosen);
+
+  if (playerDeck.length + cpuDeck.length < 6) {
+    isPlayerTurn = !isPlayerTurn;
+    if (!isPlayerTurn) setTimeout(cpuPick, 500);
+  } else {
+    isDrafting = false;
+    showSelectedCards();
+    setTimeout(() => {
+      document.getElementById("deck").style.display = "none";
+      document.getElementById("battlefield").style.display = "flex";
+      startSurvivalDuel();
+    }, 1500);
+  }
+
+  renderDraftPool();
+}
+
+function cpuPick() {
+  const index = Math.floor(Math.random() * draftPool.length);
+  pickCard(index, 'cpu');
+}
+
+function updateDraftStatus() {
+  const resultBox = document.getElementById("result");
+  if (isDrafting) {
+    resultBox.textContent = isPlayerTurn ? "🧍 Giliran Kamu Memilih Kartu" : "🤖 Bot sedang memilih...";
+  } else {
+    resultBox.textContent = "";
+  }
+}
+
+function showSelectedCards() {
+  const deck = document.getElementById("deck");
+  deck.innerHTML = "<h3>🧍 Kartu Kamu</h3>";
+  playerDeck.forEach(card => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `<img src="${card.image}" /><h3>${card.name}</h3>`;
+    deck.appendChild(div);
+  });
+
+  const botTitle = document.createElement("h3");
+  botTitle.innerText = "🤖 Kartu Bot";
+  deck.appendChild(botTitle);
+
+  cpuDeck.forEach(card => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `<img src="${card.image}" /><h3>${card.name}</h3>`;
+    deck.appendChild(div);
+  });
 }
 
 function startSurvivalDuel() {
+  playerIndex = 0;
+  cpuIndex = 0;
   playerHP = playerDeck[playerIndex].hp;
   cpuHP = cpuDeck[cpuIndex].hp;
   renderCard(playerDeck[playerIndex], "player-card", playerHP);
@@ -120,35 +167,24 @@ function startSurvivalDuel() {
 function duelTurn() {
   if (!isBattling) return;
 
-  // Player attack
   cpuHP = Math.max(0, cpuHP - playerDeck[playerIndex].attack);
   updateHPBar("cpu-card", cpuHP);
-
   if (cpuHP <= 0) {
     cpuIndex++;
-    if (cpuIndex >= cpuDeck.length) {
-      declareVictory("player");
-      return;
-    }
+    if (cpuIndex >= cpuDeck.length) return declareVictory("player");
     cpuHP = cpuDeck[cpuIndex].hp;
     renderCard(cpuDeck[cpuIndex], "cpu-card", cpuHP);
   }
 
   setTimeout(() => {
-    // CPU attack
     playerHP = Math.max(0, playerHP - cpuDeck[cpuIndex].attack);
     updateHPBar("player-card", playerHP);
-
     if (playerHP <= 0) {
       playerIndex++;
-      if (playerIndex >= playerDeck.length) {
-        declareVictory("cpu");
-        return;
-      }
+      if (playerIndex >= playerDeck.length) return declareVictory("cpu");
       playerHP = playerDeck[playerIndex].hp;
       renderCard(playerDeck[playerIndex], "player-card", playerHP);
     }
-
     setTimeout(() => duelTurn(), 800);
   }, 800);
 }
@@ -170,6 +206,7 @@ function declareVictory(winner) {
 }
 
 function resetGame() {
+  draftPool = [];
   playerDeck = [];
   cpuDeck = [];
   playerIndex = 0;
@@ -178,6 +215,5 @@ function resetGame() {
   document.getElementById("result").textContent = "";
   document.getElementById("reset-btn").style.display = "none";
   document.getElementById("battlefield").style.display = "none";
-  document.getElementById("confirm-deck-btn").style.display = "none";
-  showCardSelection();
+  startDraft();
 }
