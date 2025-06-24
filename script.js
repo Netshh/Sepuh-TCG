@@ -19,11 +19,21 @@ function drawRandomDeck(count) {
 
 function renderCard(card, targetId) {
   const target = document.getElementById(targetId);
+  const hp = card.hp;
+  const hpPercent = Math.max(0, Math.min(100, hp)); // pastikan dalam 0-100
+  let hpClass = "hp-high";
+
+  if (hpPercent <= 60) hpClass = "hp-medium";
+  if (hpPercent <= 30) hpClass = "hp-low";
+
   target.innerHTML = `
     <img src="${card.image}" alt="${card.name}" />
     <h3>${card.name}</h3>
     <p>${card.description}</p>
     <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${card.hp}</p>
+    <div class="hp-bar-container">
+      <div class="hp-bar ${hpClass}" style="width: ${hpPercent}%;"></div>
+    </div>
   `;
 }
 
