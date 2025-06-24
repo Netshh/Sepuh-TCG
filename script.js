@@ -17,12 +17,11 @@ function drawRandomDeck(count) {
   return [...cards].sort(() => 0.5 - Math.random()).slice(0, count);
 }
 
-function renderCard(card, targetId) {
+function renderCard(card, targetId, overrideHP = null) {
   const target = document.getElementById(targetId);
-  const hp = card.hp;
-  const hpPercent = Math.max(0, Math.min(100, hp)); // pastikan dalam 0-100
+  const hp = overrideHP !== null ? overrideHP : card.hp;
+  const hpPercent = Math.max(0, Math.min(100, hp));
   let hpClass = "hp-high";
-
   if (hpPercent <= 60) hpClass = "hp-medium";
   if (hpPercent <= 30) hpClass = "hp-low";
 
@@ -30,9 +29,9 @@ function renderCard(card, targetId) {
     <img src="${card.image}" alt="${card.name}" />
     <h3>${card.name}</h3>
     <p>${card.description}</p>
-    <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${card.hp}</p>
+    <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${hp}</p>
     <div class="hp-bar-container">
-      <div class="hp-bar ${hpClass}" style="width: ${hpPercent}%;"></div>
+      <div class="hp-bar ${hpClass}" style="width: ${hpPercent}%;" id="${targetId}-hpbar"></div>
     </div>
   `;
 }
@@ -100,6 +99,12 @@ function battle(playerCard, cpuCard) {
   document.getElementById("round-info").textContent = `Ronde: ${round} / ${maxRounds}`;
   document.getElementById("battlefield").style.display = "flex";
 
+  // Simulasi HP bot berkurang 30
+  const newCPUHP = Math.max(0, cpuCard.hp - 30);
+  setTimeout(() => {
+    renderCard(cpuCard, "cpu-card", newCPUHP);
+  }, 1000);
+
   if (round < maxRounds) {
     document.getElementById("next-btn").style.display = "inline-block";
   } else {
@@ -113,7 +118,7 @@ function nextRound() {
   document.getElementById("result").textContent = "";
   document.getElementById("next-btn").style.display = "none";
   document.getElementById("battlefield").style.display = "none";
-  createDeck(); // pilih ulang kartu untuk ronde berikutnya
+  createDeck();
 }
 
 function resetGame() {
