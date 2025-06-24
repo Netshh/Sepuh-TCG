@@ -1,8 +1,12 @@
+// ✅ FINAL VERSION – Sepuh TCG script.js
+// Fitur: Draft 3/10, Survival Duel 3v3, Card Preview, HP Bar, Audio
+
 let draftPool = [];
 let playerDeck = [];
 let cpuDeck = [];
 let isPlayerTurn = true;
 let isDrafting = true;
+let isGameOver = false;
 let playerIndex = 0;
 let cpuIndex = 0;
 let playerHP = 0;
@@ -199,6 +203,7 @@ function duelTurn() {
 
 function declareVictory(winner) {
   isBattling = false;
+  isGameOver = true;
   const resultBox = document.getElementById("result");
   resultBox.className = "";
   if (winner === "player") {
@@ -211,6 +216,75 @@ function declareVictory(winner) {
     playSound("lose-sound");
   }
   document.getElementById("reset-btn").style.display = "inline-block";
+  enableCardPreview();
+}
+
+function enableCardPreview() {
+  const allCardDivs = document.querySelectorAll(".card img");
+  allCardDivs.forEach(img => {
+    img.style.cursor = "zoom-in";
+    img.onclick = () => {
+      const parent = img.parentElement;
+      const name = parent.querySelector("h3")?.textContent || "";
+      const desc = parent.querySelector("p")?.textContent || "";
+      const stats = parent.querySelectorAll("p")[1]?.textContent || "";
+      showCardPreview(img.src, name, stats, desc);
+    };
+  });
+}
+
+function showCardPreview(image, name, stats, desc) {
+  let existing = document.getElementById("card-preview-overlay");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "card-preview-overlay";
+  overlay.style.position = "fixed";
+  overlay.style.top = 0;
+  overlay.style.left = 0;
+  overlay.style.width = "100vw";
+  overlay.style.height = "100vh";
+  overlay.style.background = "rgba(0,0,0,0.8)";
+  overlay.style.display = "flex";
+  overlay.style.flexDirection = "column";
+  overlay.style.justifyContent = "center";
+  overlay.style.alignItems = "center";
+  overlay.style.zIndex = 9999;
+
+  const cardBox = document.createElement("div");
+  cardBox.style.background = "#222";
+  cardBox.style.padding = "1rem";
+  cardBox.style.borderRadius = "10px";
+  cardBox.style.maxWidth = "90%";
+  cardBox.style.color = "#fff";
+  cardBox.style.textAlign = "center";
+
+  const img = document.createElement("img");
+  img.src = image;
+  img.style.maxWidth = "300px";
+  img.style.borderRadius = "10px";
+
+  const title = document.createElement("h2");
+  title.textContent = name;
+
+  const stat = document.createElement("p");
+  stat.innerHTML = `<strong>${stats}</strong>`;
+
+  const detail = document.createElement("p");
+  detail.textContent = desc;
+
+  const close = document.createElement("button");
+  close.textContent = "Tutup";
+  close.style.marginTop = "1rem";
+  close.onclick = () => overlay.remove();
+
+  cardBox.appendChild(img);
+  cardBox.appendChild(title);
+  cardBox.appendChild(stat);
+  cardBox.appendChild(detail);
+  cardBox.appendChild(close);
+  overlay.appendChild(cardBox);
+  document.body.appendChild(overlay);
 }
 
 function resetGame() {
@@ -219,9 +293,12 @@ function resetGame() {
   cpuDeck = [];
   playerIndex = 0;
   cpuIndex = 0;
+  isGameOver = false;
   document.getElementById("deck").style.display = "flex";
   document.getElementById("result").textContent = "";
   document.getElementById("reset-btn").style.display = "none";
   document.getElementById("battlefield").style.display = "none";
+  const overlay = document.getElementById("card-preview-overlay");
+  if (overlay) overlay.remove();
   startDraft();
 }
