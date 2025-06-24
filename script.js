@@ -1,5 +1,5 @@
-// ✅ FINAL VERSION – Sepuh TCG script.js
-// Fitur: Draft 3/10, Survival Duel 3v3, Card Preview, HP Bar, Audio
+// ✅ FINAL script.js untuk Sepuh TCG
+// Fitur lengkap: Draft 3/10, Survival Duel, HP Bar, Audio, Preview, Animasi
 
 let draftPool = [];
 let playerDeck = [];
@@ -73,6 +73,7 @@ function startDraft() {
   isDrafting = true;
   isPlayerTurn = true;
   renderDraftPool();
+  updateDraftDeckSlots();
 }
 
 function renderDraftPool() {
@@ -81,7 +82,7 @@ function renderDraftPool() {
 
   draftPool.forEach((card, index) => {
     const cardDiv = document.createElement("div");
-    cardDiv.className = "card";
+    cardDiv.className = "card selectable-card";
     cardDiv.innerHTML = `
       <img src="${card.image}" alt="${card.name}" />
       <h3>${card.name}</h3>
@@ -90,6 +91,7 @@ function renderDraftPool() {
 
     if (isDrafting && isPlayerTurn) {
       cardDiv.onclick = () => {
+        animateCardToDeck(cardDiv, 'player');
         pickCard(index, 'player');
       };
     }
@@ -105,9 +107,15 @@ function pickCard(index, who) {
   if (who === 'player') playerDeck.push(chosen);
   else cpuDeck.push(chosen);
 
+  updateDraftDeckSlots();
+
   if (playerDeck.length + cpuDeck.length < 6) {
     isPlayerTurn = !isPlayerTurn;
-    if (!isPlayerTurn) setTimeout(cpuPick, 500);
+    if (!isPlayerTurn) setTimeout(() => {
+      const randIndex = Math.floor(Math.random() * draftPool.length);
+      animateCardToDeck(document.querySelectorAll(".card")[randIndex], 'cpu');
+      pickCard(randIndex, 'cpu');
+    }, 500);
   } else {
     isDrafting = false;
     showAllTeams();
@@ -117,13 +125,6 @@ function pickCard(index, who) {
       startSurvivalDuel();
     }, 2000);
   }
-
-  renderDraftPool();
-}
-
-function cpuPick() {
-  const index = Math.floor(Math.random() * draftPool.length);
-  pickCard(index, 'cpu');
 }
 
 function updateDraftStatus() {
@@ -133,6 +134,56 @@ function updateDraftStatus() {
   } else {
     resultBox.textContent = "";
   }
+}
+
+function updateDraftDeckSlots() {
+  const draftVisual = document.getElementById("draft-visual");
+  if (!draftVisual) return;
+
+  draftVisual.innerHTML = `
+    <div class="draft-row">
+      <h3>🧍 Kamu</h3>
+      <div class="draft-deck" id="player-draft">
+        ${[0,1,2].map(i => `<div class="deck-slot" id="p-slot-${i}">${playerDeck[i] ? `<img src="${playerDeck[i].image}" />` : ''}</div>`).join('')}
+      </div>
+    </div>
+    <div class="draft-row">
+      <h3>🤖 Bot</h3>
+      <div class="draft-deck" id="cpu-draft">
+        ${[0,1,2].map(i => `<div class="deck-slot" id="c-slot-${i}">${cpuDeck[i] ? `<img src="${cpuDeck[i].image}" />` : ''}</div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function animateCardToDeck(cardElement, owner) {
+  const clone = cardElement.cloneNode(true);
+  const rect = cardElement.getBoundingClientRect();
+  const targetIndex = owner === 'player' ? playerDeck.length : cpuDeck.length;
+  const targetSlot = document.getElementById(`${owner === 'player' ? 'p' : 'c'}-slot-${targetIndex}`);
+
+  if (!targetSlot) return;
+  const slotRect = targetSlot.getBoundingClientRect();
+
+  clone.style.position = 'fixed';
+  clone.style.top = `${rect.top}px`;
+  clone.style.left = `${rect.left}px`;
+  clone.style.width = `${rect.width}px`;
+  clone.style.zIndex = 10000;
+  clone.classList.add("floating-card");
+  document.body.appendChild(clone);
+
+  requestAnimationFrame(() => {
+    clone.style.transition = 'all 0.6s ease';
+    clone.style.top = `${slotRect.top}px`;
+    clone.style.left = `${slotRect.left}px`;
+    clone.style.width = `${slotRect.width}px`;
+  });
+
+  setTimeout(() => {
+    clone.remove();
+    updateDraftDeckSlots();
+  }, 700);
 }
 
 function showAllTeams() {
