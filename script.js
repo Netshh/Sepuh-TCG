@@ -104,18 +104,23 @@ function renderDraftPool() {
 
 function pickCard(index, who) {
   const chosen = draftPool.splice(index, 1)[0];
+
   if (who === 'player') playerDeck.push(chosen);
   else cpuDeck.push(chosen);
+
+  renderDraftPool(); // ⬅️ Refresh list kartu yang tersisa
 
   updateDraftDeckSlots();
 
   if (playerDeck.length + cpuDeck.length < 6) {
     isPlayerTurn = !isPlayerTurn;
-    if (!isPlayerTurn) setTimeout(() => {
-      const randIndex = Math.floor(Math.random() * draftPool.length);
-      animateCardToDeck(document.querySelectorAll(".card")[randIndex], 'cpu');
-      pickCard(randIndex, 'cpu');
-    }, 500);
+    if (!isPlayerTurn) {
+      setTimeout(() => {
+        const randIndex = Math.floor(Math.random() * draftPool.length);
+        animateCardToDeck(document.querySelectorAll(".card")[randIndex], 'cpu');
+        pickCard(randIndex, 'cpu');
+      }, 500);
+    }
   } else {
     isDrafting = false;
     showAllTeams();

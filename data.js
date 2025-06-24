@@ -3,7 +3,7 @@ const cards = [
     name: "Pak Murod",
     image: "cards/pak-murod.png",
     attack: 80,
-    hp: 100,
+    hp: 80,
     description: "Ngamuk pas sahur. Lempar balok kayu!"
   },
   {
@@ -38,7 +38,7 @@ const cards = [
     name: "Jokang",
     image: "cards/Jokang-Card.png",
     attack: 80,
-    hp: 120,
+    hp: 200,
     description: "Colekannya dingin dan sunyi. Getarannya bikin merinding, bukan ketawa."
   },
   {
@@ -51,7 +51,7 @@ const cards = [
   {
     name: "Kang Kejut EX",
     image: "cards/Kang Kejut-Card.png",
-    attack: 40,
+    attack: 80,
     hp: 120,
     description: "Tegangannya misteri. Bisa nyetrum kapan aja, bahkan waktu salaman."
   },
