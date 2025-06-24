@@ -94,3 +94,8 @@ body::before {
   background: #f1c40f;
   color: #000;
 }
+
+#round-info, #final-score {
+  margin-top: 1rem;
+  font-size: 1.3rem;
+}
