@@ -11,6 +11,9 @@ function renderCard(card, targetId) {
     <p>${card.description}</p>
     <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${card.hp}</p>
   `;
+  target.classList.remove("flip");
+  void target.offsetWidth; // force reflow
+  target.classList.add("flip");
 }
 
 function playGame() {
@@ -20,14 +23,20 @@ function playGame() {
   renderCard(player, "player-card");
   renderCard(cpu, "cpu-card");
 
-  let resultText = "";
-  if (player.attack > cpu.attack) {
-    resultText = "🏆 Kamu Menang!";
-  } else if (player.attack < cpu.attack) {
-    resultText = "💀 Kamu Kalah!";
-  } else {
-    resultText = "⚔️ Seri!";
-  }
+  const playerScore = player.attack + player.hp;
+  const cpuScore = cpu.attack + cpu.hp;
 
-  document.getElementById("result").textContent = resultText;
+  const resultBox = document.getElementById("result");
+  resultBox.className = "";
+
+  if (playerScore > cpuScore) {
+    resultBox.textContent = "🏆 Kamu Menang!";
+    resultBox.classList.add("win");
+  } else if (playerScore < cpuScore) {
+    resultBox.textContent = "💀 Kamu Kalah!";
+    resultBox.classList.add("lose");
+  } else {
+    resultBox.textContent = "⚔️ Seri!";
+    resultBox.classList.add("draw");
+  }
 }

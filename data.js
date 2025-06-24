@@ -12,6 +12,6 @@ const cards = [
     attack: 40,
     hp: 120,
     description: "Jago ngibrit saat hujan. Lemes tapi bahaya."
-  },
+  }
   // Tambah kartu lain di sini
 ];
