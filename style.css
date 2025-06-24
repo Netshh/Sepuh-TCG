@@ -122,3 +122,27 @@ body::before {
 .hp-low {
   background: #e74c3c;
 }
+
+.hp-bar-container {
+  background: #555;
+  border-radius: 6px;
+  overflow: hidden;
+  height: 12px;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.hp-bar {
+  height: 100%;
+  transition: width 0.5s ease-in-out;
+}
+
+.hp-high {
+  background: #2ecc71;
+}
+.hp-medium {
+  background: #f1c40f;
+}
+.hp-low {
+  background: #e74c3c;
+}

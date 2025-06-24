@@ -1,5 +1,7 @@
+let allCards = [];
 let playerDeck = [];
 let cpuDeck = [];
+let selectedCards = [];
 let round = 1;
 let maxRounds = 3;
 let playerScore = 0;
@@ -35,7 +37,7 @@ function renderCard(card, targetId, overrideHP = null) {
     <img src="${card.image}" alt="${card.name}" />
     <h3>${card.name}</h3>
     <p>${card.description}</p>
-    <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${hp}</p>
+    <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${card.hp}</p>
     <div class="hp-bar-container">
       <div class="hp-bar ${hpClass}" style="width: ${hpPercent}%;" id="${targetId}-hpbar"></div>
     </div>
@@ -48,16 +50,16 @@ function startGame() {
   music.play().catch(() => alert("Klik dibutuhkan untuk memutar musik."));
 
   document.getElementById("start-btn").style.display = "none";
-  resetGame();
+  showCardSelection();
 }
 
-function createDeck() {
+function showCardSelection() {
   const deckContainer = document.getElementById("deck");
   deckContainer.innerHTML = "";
-  playerDeck = drawRandomDeck(3);
-  cpuDeck = drawRandomDeck(3);
+  allCards = drawRandomDeck(5);
+  selectedCards = [];
 
-  playerDeck.forEach((card, index) => {
+  allCards.forEach((card, index) => {
     const cardDiv = document.createElement("div");
     cardDiv.className = "card";
     cardDiv.innerHTML = `
@@ -65,13 +67,48 @@ function createDeck() {
       <h3>${card.name}</h3>
       <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${card.hp}</p>
     `;
+
     cardDiv.onclick = () => {
-      playSound("click-sound");
-      document.getElementById("deck").style.display = "none";
-      startDuel(card, cpuDeck[round - 1]);
+      if (selectedCards.includes(card)) {
+        selectedCards = selectedCards.filter(c => c !== card);
+        cardDiv.style.border = "";
+      } else {
+        if (selectedCards.length >= 3) {
+          alert("Kamu hanya bisa memilih 3 kartu!");
+          return;
+        }
+        selectedCards.push(card);
+        cardDiv.style.border = "3px solid lime";
+      }
+
+      document.getElementById("confirm-deck-btn").style.display = (selectedCards.length === 3) ? "inline-block" : "none";
     };
+
     deckContainer.appendChild(cardDiv);
   });
+}
+
+function confirmDeck() {
+  playerDeck = selectedCards;
+  cpuDeck = drawRandomDeck(3);
+  round = 1;
+  playerScore = 0;
+  cpuScore = 0;
+  document.getElementById("deck").style.display = "flex";
+  document.getElementById("confirm-deck-btn").style.display = "none";
+  document.getElementById("round-info").textContent = `Ronde: 1 / ${maxRounds}`;
+  startNextDuel();
+}
+
+function startNextDuel() {
+  document.getElementById("result").textContent = "";
+  document.getElementById("next-btn").style.display = "none";
+  document.getElementById("battlefield").style.display = "none";
+
+  const playerCard = playerDeck[round - 1];
+  const cpuCard = cpuDeck[round - 1];
+
+  startDuel(playerCard, cpuCard);
 }
 
 function startDuel(playerCard, cpuCard) {
@@ -84,8 +121,6 @@ function startDuel(playerCard, cpuCard) {
   renderCard(playerCard, "player-card", playerHP);
   renderCard(cpuCard, "cpu-card", cpuHP);
   document.getElementById("battlefield").style.display = "flex";
-  document.getElementById("round-info").textContent = `Ronde: ${round} / ${maxRounds}`;
-  document.getElementById("result").textContent = "";
 
   setTimeout(() => duelTurn(), 1000);
 }
@@ -101,15 +136,14 @@ function duelTurn() {
     return;
   }
 
-  // Delay lalu bot menyerang player
   setTimeout(() => {
+    // Bot menyerang player
     playerHP = Math.max(0, playerHP - cpuCardCurrent.attack);
     updateHPBar("player-card", playerHP);
 
     if (playerHP <= 0) {
       endDuel("cpu");
     } else {
-      // Lanjut giliran berikutnya
       setTimeout(() => duelTurn(), 800);
     }
   }, 800);
@@ -155,23 +189,23 @@ function endDuel(winner) {
 function nextRound() {
   round++;
   document.getElementById("deck").style.display = "flex";
-  document.getElementById("result").textContent = "";
-  document.getElementById("next-btn").style.display = "none";
-  document.getElementById("battlefield").style.display = "none";
-  createDeck();
+  startNextDuel();
 }
 
 function resetGame() {
   round = 1;
   playerScore = 0;
   cpuScore = 0;
+  playerDeck = [];
+  cpuDeck = [];
   document.getElementById("deck").style.display = "flex";
   document.getElementById("result").textContent = "";
   document.getElementById("reset-btn").style.display = "none";
   document.getElementById("final-score").style.display = "none";
   document.getElementById("next-btn").style.display = "none";
+  document.getElementById("confirm-deck-btn").style.display = "none";
   document.getElementById("round-info").textContent = `Ronde: 1 / ${maxRounds}`;
-  createDeck();
+  showCardSelection();
 }
 
 function showFinalScore() {
