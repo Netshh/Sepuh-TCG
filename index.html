@@ -1,6 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<style>
+  body {
+    background: #111;
+    color: #fff;
+    font-family: sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 2rem;
+  }
+  button {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  #battlefield {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 2rem;
+    gap: 2rem;
+  }
+  .card {
+    background: #222;
+    padding: 1rem;
+    border-radius: 8px;
+    width: 200px;
+  }
+  .card img {
+    width: 100%;
+    border-radius: 4px;
+  }
+</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Sepuh TCG</title>
@@ -8,7 +44,16 @@
 </head>
 <body>
   <h1>🧓 Sepuh TCG</h1>
-  <div id="card-grid">
+<button onclick="playGame()">Draw Card</button>
+
+<div id="battlefield">
+  <div id="player-card" class="card"></div>
+  <div id="vs">VS</div>
+  <div id="cpu-card" class="card"></div>
+</div>
+
+<h2 id="result"></h2>
+
     <!-- Cards will go here -->
   </div>
   <script src="data.js"></script>
