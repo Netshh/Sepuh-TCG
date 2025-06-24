@@ -106,12 +106,12 @@ function pickCard(index, who) {
     if (!isPlayerTurn) setTimeout(cpuPick, 500);
   } else {
     isDrafting = false;
-    showSelectedCards();
+    showAllTeams();
     setTimeout(() => {
       document.getElementById("deck").style.display = "none";
       document.getElementById("battlefield").style.display = "flex";
       startSurvivalDuel();
-    }, 1500);
+    }, 2000);
   }
 
   renderDraftPool();
@@ -131,26 +131,34 @@ function updateDraftStatus() {
   }
 }
 
-function showSelectedCards() {
-  const deck = document.getElementById("deck");
-  deck.innerHTML = "<h3>🧍 Kartu Kamu</h3>";
+function showAllTeams() {
+  const display = document.createElement("div");
+  display.innerHTML = "<h3>🧍 Kartu Kamu & 🤖 Kartu Bot</h3>";
+  display.style.display = "flex";
+  display.style.justifyContent = "center";
+  display.style.gap = "3rem";
+
+  const playerRow = document.createElement("div");
+  playerRow.innerHTML = "<strong>🧍 Kamu:</strong><br/>";
   playerDeck.forEach(card => {
     const div = document.createElement("div");
     div.className = "card";
-    div.innerHTML = `<img src="${card.image}" /><h3>${card.name}</h3>`;
-    deck.appendChild(div);
+    div.innerHTML = `<img src="${card.image}" alt="${card.name}" title="${card.name}" style="width: 80px" />`;
+    playerRow.appendChild(div);
   });
 
-  const botTitle = document.createElement("h3");
-  botTitle.innerText = "🤖 Kartu Bot";
-  deck.appendChild(botTitle);
-
+  const cpuRow = document.createElement("div");
+  cpuRow.innerHTML = "<strong>🤖 Bot:</strong><br/>";
   cpuDeck.forEach(card => {
     const div = document.createElement("div");
     div.className = "card";
-    div.innerHTML = `<img src="${card.image}" /><h3>${card.name}</h3>`;
-    deck.appendChild(div);
+    div.innerHTML = `<img src="${card.image}" alt="${card.name}" title="${card.name}" style="width: 80px" />`;
+    cpuRow.appendChild(div);
   });
+
+  display.appendChild(playerRow);
+  display.appendChild(cpuRow);
+  document.body.insertBefore(display, document.getElementById("battlefield"));
 }
 
 function startSurvivalDuel() {
