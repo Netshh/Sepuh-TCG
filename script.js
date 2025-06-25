@@ -1,18 +1,24 @@
 // ✅ Update Online Multiplayer!
 // Hubungkan ke server multiplayer
-const socket = io("https://sepuh-tcg-server.glitch.me"); // Ganti dengan URL server kamu
+// Ganti URL dengan alamat server Glitch kamu
+const socket = io("https://sepuh-tcg-server.glitch.me");
 
-// Log dasar koneksi
+// Event saat terkoneksi
 socket.on("connect", () => {
-  console.log("✅ Terhubung ke server:", socket.id);
+  console.log("🔌 Terkoneksi ke server:", socket.id);
 });
 
+// Event saat menunggu lawan
 socket.on("waiting", (msg) => {
-  console.log("⌛", msg);
+  console.log("🕒", msg);
+  document.getElementById("result").textContent = msg;
 });
 
+// Event saat match ditemukan
 socket.on("match_found", (data) => {
-  console.log("🎯 Match ditemukan!", data);
+  console.log("✅ Match ditemukan:", data);
+  document.getElementById("result").textContent = "🎮 Lawan ditemukan! Siap bertarung!";
+  // Lanjutkan ke logika multiplayer kamu di sini...
 });
 
 let draftPool = [];
