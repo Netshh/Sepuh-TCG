@@ -37,20 +37,31 @@ function preloadImagesWithProgress(imageUrls, callback) {
   const bar = document.getElementById("loader-bar");
   const percent = document.getElementById("loader-percent");
 
-  imageUrls.forEach(url => {
+  if (total === 0) return callback();
+}
+
+  imageUrls.forEach((url, i) => {
     const img = new Image();
-    img.onload = img.onerror = () => {
+    const timeout = setTimeout(() => {
       loaded++;
-      const progress = Math.floor((loaded / total) * 100);
-      if (bar) bar.style.width = `${progress}%`;
-      if (percent) percent.textContent = `${progress}%`;
-      if (loaded === total) {
-        setTimeout(callback, 300);
-      }
+      updateProgress(loaded, total);
+      if (loaded === total) callback();
+    }, 5000); // fallback jika onload tidak pernah dipanggil (incognito bug)
+
+    img.onload = img.onerror = () => {
+      clearTimeout(timeout);
+      loaded++;
+      updateProgress(loaded, total);
+      if (loaded === total) callback();
     };
     img.src = url;
   });
-}
+
+    function updateProgress(loaded, total) {
+    const progress = Math.floor((loaded / total) * 100);
+    if (bar) bar.style.width = `${progress}%`;
+    if (percent) percent.textContent = `${progress}%`;
+  }
 
 function playSound(id) {
   const sound = document.getElementById(id);
