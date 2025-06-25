@@ -25,12 +25,6 @@ const botComments = [
   "Rasakan Ini Tua!"
 ];
 
-// Loader overlay hide after load
-window.addEventListener("load", () => {
-  const loader = document.getElementById("loader-overlay");
-  if (loader) loader.style.display = "none";
-});
-
 function preloadImagesWithProgress(imageUrls, callback) {
   let loaded = 0;
   const total = imageUrls.length;
