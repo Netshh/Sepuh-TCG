@@ -31,14 +31,22 @@ window.addEventListener("load", () => {
   if (loader) loader.style.display = "none";
 });
 
-function preloadImages(imageUrls, callback) {
+function preloadImagesWithProgress(imageUrls, callback) {
   let loaded = 0;
   const total = imageUrls.length;
+  const bar = document.getElementById("loader-bar");
+  const percent = document.getElementById("loader-percent");
+
   imageUrls.forEach(url => {
     const img = new Image();
     img.onload = img.onerror = () => {
       loaded++;
-      if (loaded === total) callback();
+      const progress = Math.floor((loaded / total) * 100);
+      if (bar) bar.style.width = `${progress}%`;
+      if (percent) percent.textContent = `${progress}%`;
+      if (loaded === total) {
+        setTimeout(callback, 300);
+      }
     };
     img.src = url;
   });
@@ -119,6 +127,14 @@ function startGame() {
   loader.style.display = "flex";
   const music = document.getElementById("bg-music");
   const allImages = cards.map(c => c.image);
+
+  preloadImagesWithProgress(allImages, () => {
+    loader.style.display = "none";
+    music.volume = 0.2;
+    music.play().catch(() => alert("Klik dibutuhkan untuk memutar musik."));
+    document.getElementById("start-btn").style.display = "none";
+    startDraft();
+  });
 }
 
 function startDraft() {
