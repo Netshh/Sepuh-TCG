@@ -1,5 +1,5 @@
-// ✅ FINAL script.js dengan FIX tambahan
-// Bugfix: player tidak bisa memilih kartu kedua setelah bot memilih
+// ✅ FINAL script.js dengan FIX duel dan status
+// Bugfix: HP tidak berkurang dan teks draft tidak hilang setelah duel
 
 let draftPool = [];
 let playerDeck = [];
@@ -109,6 +109,7 @@ function onCardClick(index, cardDiv) {
       updateDraftStatus();
     } else {
       isDrafting = false;
+      updateDraftStatus();
       showAllTeams();
       setTimeout(() => {
         document.getElementById("deck").style.display = "none";
@@ -126,86 +127,6 @@ function updateDraftStatus() {
   } else {
     resultBox.textContent = "";
   }
-}
-
-function updateDraftDeckSlots() {
-  const draftVisual = document.getElementById("draft-visual");
-  if (!draftVisual) return;
-
-  draftVisual.innerHTML = `
-    <div class="draft-row">
-      <h3>🧍 Kamu</h3>
-      <div class="draft-deck" id="player-draft">
-        ${[0,1,2].map(i => `<div class="deck-slot" id="p-slot-${i}">${playerDeck[i] ? `<img src="${playerDeck[i].image}" />` : ''}</div>`).join('')}
-      </div>
-    </div>
-    <div class="draft-row">
-      <h3>🤖 Bot</h3>
-      <div class="draft-deck" id="cpu-draft">
-        ${[0,1,2].map(i => `<div class="deck-slot" id="c-slot-${i}">${cpuDeck[i] ? `<img src="${cpuDeck[i].image}" />` : ''}</div>`).join('')}
-      </div>
-    </div>
-  `;
-}
-
-function animateCardToDeck(cardElement, owner) {
-  const clone = cardElement.cloneNode(true);
-  const rect = cardElement.getBoundingClientRect();
-  const targetIndex = owner === 'player' ? playerDeck.length - 1 : cpuDeck.length - 1;
-  const targetSlot = document.getElementById(`${owner === 'player' ? 'p' : 'c'}-slot-${targetIndex}`);
-
-  if (!targetSlot) return;
-  const slotRect = targetSlot.getBoundingClientRect();
-
-  clone.style.position = 'fixed';
-  clone.style.top = `${rect.top}px`;
-  clone.style.left = `${rect.left}px`;
-  clone.style.width = `${rect.width}px`;
-  clone.style.zIndex = 10000;
-  clone.classList.add("floating-card");
-  document.body.appendChild(clone);
-
-  requestAnimationFrame(() => {
-    clone.style.transition = 'all 0.6s ease';
-    clone.style.top = `${slotRect.top}px`;
-    clone.style.left = `${slotRect.left}px`;
-    clone.style.width = `${slotRect.width}px`;
-  });
-
-  setTimeout(() => {
-    clone.remove();
-    updateDraftDeckSlots();
-  }, 700);
-}
-
-function showAllTeams() {
-  const display = document.createElement("div");
-  display.innerHTML = "<h3>🧍 Kartu Kamu & 🤖 Kartu Bot</h3>";
-  display.style.display = "flex";
-  display.style.justifyContent = "center";
-  display.style.gap = "3rem";
-
-  const playerRow = document.createElement("div");
-  playerRow.innerHTML = "<strong>🧍 Kamu:</strong><br/>";
-  playerDeck.forEach(card => {
-    const div = document.createElement("div");
-    div.className = "card";
-    div.innerHTML = `<img src="${card.image}" alt="${card.name}" title="${card.name}" style="width: 80px" />`;
-    playerRow.appendChild(div);
-  });
-
-  const cpuRow = document.createElement("div");
-  cpuRow.innerHTML = "<strong>🤖 Bot:</strong><br/>";
-  cpuDeck.forEach(card => {
-    const div = document.createElement("div");
-    div.className = "card";
-    div.innerHTML = `<img src="${card.image}" alt="${card.name}" title="${card.name}" style="width: 80px" />`;
-    cpuRow.appendChild(div);
-  });
-
-  display.appendChild(playerRow);
-  display.appendChild(cpuRow);
-  document.body.insertBefore(display, document.getElementById("battlefield"));
 }
 
 function startSurvivalDuel() {
