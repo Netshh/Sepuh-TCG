@@ -2,8 +2,8 @@ const cards = [
   {
     name: "Pak Murod",
     image: "cards/pak-murod.png",
-    attack: 80,
-    hp: 80,
+    attack: 50,
+    hp: 200,
     description: "Ngamuk pas sahur. Lempar balok kayu!"
   },
   {
