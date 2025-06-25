@@ -103,23 +103,29 @@ function renderDraftPool() {
 }
 
 function pickCard(index, who) {
+  const chosenCardElement = document.querySelectorAll(".card")[index]; // 🔁 simpan elemen sebelum hilang
   const chosen = draftPool.splice(index, 1)[0];
 
   if (who === 'player') playerDeck.push(chosen);
   else cpuDeck.push(chosen);
 
-  renderDraftPool(); // ⬅️ Refresh list kartu yang tersisa
-
+  renderDraftPool(); // ⬅️ perbarui tampilan kartu
   updateDraftDeckSlots();
+
+  // 🔁 Lakukan animasi setelah elemen baru tergambar
+  setTimeout(() => {
+    animateCardToDeck(chosenCardElement, who);
+  }, 50);
 
   if (playerDeck.length + cpuDeck.length < 6) {
     isPlayerTurn = !isPlayerTurn;
     if (!isPlayerTurn) {
       setTimeout(() => {
         const randIndex = Math.floor(Math.random() * draftPool.length);
-        animateCardToDeck(document.querySelectorAll(".card")[randIndex], 'cpu');
+        const botCard = document.querySelectorAll(".card")[randIndex];
         pickCard(randIndex, 'cpu');
-      }, 500);
+        animateCardToDeck(botCard, 'cpu');
+      }, 600);
     }
   } else {
     isDrafting = false;
