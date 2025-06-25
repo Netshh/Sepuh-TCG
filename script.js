@@ -1,4 +1,19 @@
-// ✅ FINAL script.js 100% fitur lengkap & FIXED
+// ✅ Update Online Multiplayer!
+// Hubungkan ke server multiplayer
+const socket = io("https://sepuh-tcg-server.glitch.me"); // Ganti dengan URL server kamu
+
+// Log dasar koneksi
+socket.on("connect", () => {
+  console.log("✅ Terhubung ke server:", socket.id);
+});
+
+socket.on("waiting", (msg) => {
+  console.log("⌛", msg);
+});
+
+socket.on("match_found", (data) => {
+  console.log("🎯 Match ditemukan!", data);
+});
 
 let draftPool = [];
 let playerDeck = [];
