@@ -12,12 +12,43 @@ let playerHP = 0;
 let cpuHP = 0;
 let isBattling = false;
 
+const botComments = [
+  "Hyaah! Serangan maut bot!",
+  "Waduh, itu sakit juga!",
+  "Sabar... aku masih punya dua lagi!",
+  "Hehe, ini baru pemanasan~",
+  "Kartu tua juga bisa marah!",
+  "Aduh! Kok bisa kalah ya?",
+  "Aku tidak takut kamu, sepuh!"
+];
+
 function playSound(id) {
   const sound = document.getElementById(id);
   if (sound) {
     sound.currentTime = 0;
     sound.play();
   }
+}
+
+function showBotComment(text) {
+  const comment = document.createElement("div");
+  comment.textContent = `🤖 ${text}`;
+  comment.style.position = "fixed";
+  comment.style.bottom = "20px";
+  comment.style.right = "20px";
+  comment.style.background = "#444";
+  comment.style.color = "#fff";
+  comment.style.padding = "0.8rem 1rem";
+  comment.style.borderRadius = "10px";
+  comment.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
+  comment.style.zIndex = 9999;
+  comment.style.opacity = 0;
+  comment.style.transition = "opacity 0.5s ease";
+
+  document.body.appendChild(comment);
+  setTimeout(() => { comment.style.opacity = 1; }, 100);
+  setTimeout(() => { comment.style.opacity = 0; }, 2400);
+  setTimeout(() => { comment.remove(); }, 3000);
 }
 
 function drawDraftPool(count) {
@@ -213,22 +244,33 @@ function duelTurn() {
   if (!isBattling) return;
   cpuHP = Math.max(0, cpuHP - playerDeck[playerIndex].attack);
   updateHPBar("cpu-card", cpuHP);
-  if (cpuHP <= 0) {
-    cpuIndex++;
-    if (cpuIndex >= cpuDeck.length) return declareVictory("player");
-    cpuHP = cpuDeck[cpuIndex].hp;
-    renderCard(cpuDeck[cpuIndex], "cpu-card", cpuHP);
-  }
+
+  setTimeout(() => {
+    if (cpuHP <= 0) {
+      cpuIndex++;
+      if (cpuIndex >= cpuDeck.length) return declareVictory("player");
+      cpuHP = cpuDeck[cpuIndex].hp;
+      renderCard(cpuDeck[cpuIndex], "cpu-card", cpuHP);
+      showBotComment("Kartu berikutnya... masih ada! 😤");
+    } else {
+      const randomTalk = botComments[Math.floor(Math.random() * botComments.length)];
+      showBotComment(randomTalk);
+    }
+  }, 300);
+
   setTimeout(() => {
     playerHP = Math.max(0, playerHP - cpuDeck[cpuIndex].attack);
     updateHPBar("player-card", playerHP);
-    if (playerHP <= 0) {
-      playerIndex++;
-      if (playerIndex >= playerDeck.length) return declareVictory("cpu");
-      playerHP = playerDeck[playerIndex].hp;
-      renderCard(playerDeck[playerIndex], "player-card", playerHP);
-    }
-    setTimeout(() => duelTurn(), 800);
+
+    setTimeout(() => {
+      if (playerHP <= 0) {
+        playerIndex++;
+        if (playerIndex >= playerDeck.length) return declareVictory("cpu");
+        playerHP = playerDeck[playerIndex].hp;
+        renderCard(playerDeck[playerIndex], "player-card", playerHP);
+      }
+      setTimeout(() => duelTurn(), 800);
+    }, 400);
   }, 800);
 }
 
@@ -241,10 +283,12 @@ function declareVictory(winner) {
     resultBox.textContent = "🏆 Kamu Menang!";
     resultBox.classList.add("win");
     playSound("win-sound");
+    showBotComment("Arrghh! Aku kalah! Kamu kuat juga... 😵");
   } else {
     resultBox.textContent = "💀 Kamu Kalah!";
     resultBox.classList.add("lose");
     playSound("lose-sound");
+    showBotComment("Hehe! Dasar sepuh pensiunan! 😎");
   }
   document.getElementById("reset-btn").style.display = "inline-block";
   enableCardPreview();
