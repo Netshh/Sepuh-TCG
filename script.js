@@ -1,4 +1,4 @@
-// ✅ FINAL script.js untuk Sepuh TCG
+// ✅ FINAL script.js untuk Sepuh TCG (FIXED & FULL)
 // Fitur lengkap: Draft 3/10, Survival Duel, HP Bar, Audio, Preview, Animasi
 
 let draftPool = [];
@@ -91,8 +91,37 @@ function renderDraftPool() {
 
     if (isDrafting && isPlayerTurn) {
       cardDiv.onclick = () => {
-        animateCardToDeck(cardDiv, 'player');
-        pickCard(index, 'player');
+        if (!isPlayerTurn || !isDrafting) return;
+        const chosenCardElement = cardDiv;
+        const chosen = draftPool.splice(index, 1)[0];
+        playerDeck.push(chosen);
+        isPlayerTurn = false;
+        renderDraftPool();
+        updateDraftDeckSlots();
+        animateCardToDeck(chosenCardElement, 'player');
+
+        setTimeout(() => {
+          const randIndex = Math.floor(Math.random() * draftPool.length);
+          const botCard = document.querySelectorAll(".card")[randIndex];
+          const botChoice = draftPool.splice(randIndex, 1)[0];
+          cpuDeck.push(botChoice);
+          renderDraftPool();
+          updateDraftDeckSlots();
+          animateCardToDeck(botCard, 'cpu');
+
+          if (playerDeck.length + cpuDeck.length < 6) {
+            isPlayerTurn = true;
+            updateDraftStatus();
+          } else {
+            isDrafting = false;
+            showAllTeams();
+            setTimeout(() => {
+              document.getElementById("deck").style.display = "none";
+              document.getElementById("battlefield").style.display = "flex";
+              startSurvivalDuel();
+            }, 2000);
+          }
+        }, 600);
       };
     }
 
@@ -100,42 +129,6 @@ function renderDraftPool() {
   });
 
   updateDraftStatus();
-}
-
-function pickCard(index, who) {
-  const chosenCardElement = document.querySelectorAll(".card")[index]; // 🔁 simpan elemen sebelum hilang
-  const chosen = draftPool.splice(index, 1)[0];
-
-  if (who === 'player') playerDeck.push(chosen);
-  else cpuDeck.push(chosen);
-
-  renderDraftPool(); // ⬅️ perbarui tampilan kartu
-  updateDraftDeckSlots();
-
-  // 🔁 Lakukan animasi setelah elemen baru tergambar
-  setTimeout(() => {
-    animateCardToDeck(chosenCardElement, who);
-  }, 50);
-
-  if (playerDeck.length + cpuDeck.length < 6) {
-    isPlayerTurn = !isPlayerTurn;
-    if (!isPlayerTurn) {
-      setTimeout(() => {
-        const randIndex = Math.floor(Math.random() * draftPool.length);
-        const botCard = document.querySelectorAll(".card")[randIndex];
-        pickCard(randIndex, 'cpu');
-        animateCardToDeck(botCard, 'cpu');
-      }, 600);
-    }
-  } else {
-    isDrafting = false;
-    showAllTeams();
-    setTimeout(() => {
-      document.getElementById("deck").style.display = "none";
-      document.getElementById("battlefield").style.display = "flex";
-      startSurvivalDuel();
-    }, 2000);
-  }
 }
 
 function updateDraftStatus() {
@@ -170,7 +163,7 @@ function updateDraftDeckSlots() {
 function animateCardToDeck(cardElement, owner) {
   const clone = cardElement.cloneNode(true);
   const rect = cardElement.getBoundingClientRect();
-  const targetIndex = owner === 'player' ? playerDeck.length : cpuDeck.length;
+  const targetIndex = owner === 'player' ? playerDeck.length - 1 : cpuDeck.length - 1;
   const targetSlot = document.getElementById(`${owner === 'player' ? 'p' : 'c'}-slot-${targetIndex}`);
 
   if (!targetSlot) return;
