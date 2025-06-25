@@ -1,5 +1,4 @@
-// ✅ FINAL script.js dengan FIX duel dan status
-// Bugfix: HP tidak berkurang dan teks draft tidak hilang setelah duel
+// ✅ FINAL script.js 100% fitur lengkap & FIXED
 
 let draftPool = [];
 let playerDeck = [];
@@ -44,11 +43,22 @@ function renderCard(card, targetId, overrideHP = null) {
   `;
 }
 
+function updateHPBar(targetId, newHP) {
+  const bar = document.getElementById(`${targetId}-hpbar`);
+  const percent = Math.max(0, Math.min(100, newHP));
+  let hpClass = "hp-high";
+  if (percent <= 60) hpClass = "hp-medium";
+  if (percent <= 30) hpClass = "hp-low";
+  if (bar) {
+    bar.style.width = percent + "%";
+    bar.className = `hp-bar ${hpClass}`;
+  }
+}
+
 function startGame() {
   const music = document.getElementById("bg-music");
   music.volume = 0.2;
   music.play().catch(() => alert("Klik dibutuhkan untuk memutar musik."));
-
   document.getElementById("start-btn").style.display = "none";
   startDraft();
 }
@@ -75,11 +85,9 @@ function renderDraftPool() {
       <h3>${card.name}</h3>
       <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${card.hp}</p>
     `;
-
     if (isDrafting) {
       cardDiv.addEventListener("click", () => onCardClick(index, cardDiv));
     }
-
     deckContainer.appendChild(cardDiv);
   });
 
@@ -129,6 +137,67 @@ function updateDraftStatus() {
   }
 }
 
+function updateDraftDeckSlots() {
+  const draftVisual = document.getElementById("draft-visual");
+  if (!draftVisual) return;
+  draftVisual.innerHTML = `
+    <div class="draft-row">
+      <h3>🧍 Kamu</h3>
+      <div class="draft-deck" id="player-draft">
+        ${[0,1,2].map(i => `<div class="deck-slot" id="p-slot-${i}">${playerDeck[i] ? `<img src="${playerDeck[i].image}" />` : ''}</div>`).join('')}
+      </div>
+    </div>
+    <div class="draft-row">
+      <h3>🤖 Bot</h3>
+      <div class="draft-deck" id="cpu-draft">
+        ${[0,1,2].map(i => `<div class="deck-slot" id="c-slot-${i}">${cpuDeck[i] ? `<img src="${cpuDeck[i].image}" />` : ''}</div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function animateCardToDeck(cardElement, owner) {
+  const clone = cardElement.cloneNode(true);
+  const rect = cardElement.getBoundingClientRect();
+  const targetIndex = owner === 'player' ? playerDeck.length - 1 : cpuDeck.length - 1;
+  const targetSlot = document.getElementById(`${owner === 'player' ? 'p' : 'c'}-slot-${targetIndex}`);
+  if (!targetSlot) return;
+  const slotRect = targetSlot.getBoundingClientRect();
+  clone.style.position = 'fixed';
+  clone.style.top = `${rect.top}px`;
+  clone.style.left = `${rect.left}px`;
+  clone.style.width = `${rect.width}px`;
+  clone.style.zIndex = 10000;
+  clone.classList.add("floating-card");
+  document.body.appendChild(clone);
+  requestAnimationFrame(() => {
+    clone.style.transition = 'all 0.6s ease';
+    clone.style.top = `${slotRect.top}px`;
+    clone.style.left = `${slotRect.left}px`;
+    clone.style.width = `${slotRect.width}px`;
+  });
+  setTimeout(() => {
+    clone.remove();
+    updateDraftDeckSlots();
+  }, 700);
+}
+
+function showAllTeams() {
+  const container = document.createElement("div");
+  container.className = "card-grid";
+  container.innerHTML = `
+    <div class="card-section">
+      <div class="label">🧍 Player</div>
+      ${playerDeck.map(card => `<div class="card"><img src="${card.image}" alt="${card.name}" title="${card.name}" /></div>`).join('')}
+    </div>
+    <div class="card-section">
+      <div class="label">🤖 Bot</div>
+      ${cpuDeck.map(card => `<div class="card"><img src="${card.image}" alt="${card.name}" title="${card.name}" /></div>`).join('')}
+    </div>
+  `;
+  document.body.insertBefore(container, document.getElementById("battlefield"));
+}
+
 function startSurvivalDuel() {
   playerIndex = 0;
   cpuIndex = 0;
@@ -142,7 +211,6 @@ function startSurvivalDuel() {
 
 function duelTurn() {
   if (!isBattling) return;
-
   cpuHP = Math.max(0, cpuHP - playerDeck[playerIndex].attack);
   updateHPBar("cpu-card", cpuHP);
   if (cpuHP <= 0) {
@@ -151,7 +219,6 @@ function duelTurn() {
     cpuHP = cpuDeck[cpuIndex].hp;
     renderCard(cpuDeck[cpuIndex], "cpu-card", cpuHP);
   }
-
   setTimeout(() => {
     playerHP = Math.max(0, playerHP - cpuDeck[cpuIndex].attack);
     updateHPBar("player-card", playerHP);
@@ -200,7 +267,6 @@ function enableCardPreview() {
 function showCardPreview(image, name, stats, desc) {
   let existing = document.getElementById("card-preview-overlay");
   if (existing) existing.remove();
-
   const overlay = document.createElement("div");
   overlay.id = "card-preview-overlay";
   overlay.style.position = "fixed";
@@ -214,7 +280,6 @@ function showCardPreview(image, name, stats, desc) {
   overlay.style.justifyContent = "center";
   overlay.style.alignItems = "center";
   overlay.style.zIndex = 9999;
-
   const cardBox = document.createElement("div");
   cardBox.style.background = "#222";
   cardBox.style.padding = "1rem";
@@ -222,26 +287,20 @@ function showCardPreview(image, name, stats, desc) {
   cardBox.style.maxWidth = "90%";
   cardBox.style.color = "#fff";
   cardBox.style.textAlign = "center";
-
   const img = document.createElement("img");
   img.src = image;
   img.style.maxWidth = "300px";
   img.style.borderRadius = "10px";
-
   const title = document.createElement("h2");
   title.textContent = name;
-
   const stat = document.createElement("p");
   stat.innerHTML = `<strong>${stats}</strong>`;
-
   const detail = document.createElement("p");
   detail.textContent = desc;
-
   const close = document.createElement("button");
   close.textContent = "Tutup";
   close.style.marginTop = "1rem";
   close.onclick = () => overlay.remove();
-
   cardBox.appendChild(img);
   cardBox.appendChild(title);
   cardBox.appendChild(stat);
@@ -264,5 +323,7 @@ function resetGame() {
   document.getElementById("battlefield").style.display = "none";
   const overlay = document.getElementById("card-preview-overlay");
   if (overlay) overlay.remove();
+  const draftVisual = document.getElementById("draft-visual");
+  if (draftVisual) draftVisual.innerHTML = "";
   startDraft();
 }
