@@ -19,8 +19,30 @@ const botComments = [
   "Hehe, ini baru pemanasan~",
   "Kartu tua juga bisa marah!",
   "Aduh! Kok bisa kalah ya?",
-  "Aku tidak takut kamu, sepuh!"
+  "Aku tidak takut kamu, sepuh!",
+  "Dasar Kolot!",
+  "bajingan!",
+  "Rasakan Ini Tua!"
 ];
+
+// Loader overlay hide after load
+window.addEventListener("load", () => {
+  const loader = document.getElementById("loader-overlay");
+  if (loader) loader.style.display = "none";
+});
+
+function preloadImages(imageUrls, callback) {
+  let loaded = 0;
+  const total = imageUrls.length;
+  imageUrls.forEach(url => {
+    const img = new Image();
+    img.onload = img.onerror = () => {
+      loaded++;
+      if (loaded === total) callback();
+    };
+    img.src = url;
+  });
+}
 
 function playSound(id) {
   const sound = document.getElementById(id);
@@ -93,11 +115,10 @@ function updateHPBar(targetId, newHP) {
 }
 
 function startGame() {
+  const loader = document.getElementById("loader-overlay");
+  loader.style.display = "flex";
   const music = document.getElementById("bg-music");
-  music.volume = 0.2;
-  music.play().catch(() => alert("Klik dibutuhkan untuk memutar musik."));
-  document.getElementById("start-btn").style.display = "none";
-  startDraft();
+  const allImages = cards.map(c => c.image);
 }
 
 function startDraft() {
@@ -289,7 +310,7 @@ function declareVictory(winner) {
     resultBox.textContent = "🏆 Kamu Menang!";
     resultBox.classList.add("win");
     playSound("win-sound");
-    showBotComment("Arrghh! Aku kalah! Kamu kuat juga... 😵");
+    showBotComment("Arrghh! Abah kalah! Kamu kuat juga... 😵");
   } else {
     resultBox.textContent = "💀 Kamu Kalah!";
     resultBox.classList.add("lose");
