@@ -25,6 +25,12 @@ const botComments = [
   "Rasakan Ini Tua!"
 ];
 
+// Loader overlay hide after load
+window.addEventListener("load", () => {
+  const loader = document.getElementById("loader-overlay");
+  if (loader) loader.style.display = "none";
+});
+
 function preloadImagesWithProgress(imageUrls, callback) {
   let loaded = 0;
   const total = imageUrls.length;
@@ -45,7 +51,7 @@ function preloadImagesWithProgress(imageUrls, callback) {
       loaded++;
       updateProgress();
       if (loaded === total) callback();
-    }, 7000); // fallback
+    }, 7000);
 
     img.onload = img.onerror = () => {
       clearTimeout(timeout);
@@ -55,14 +61,16 @@ function preloadImagesWithProgress(imageUrls, callback) {
     };
 
     img.src = url;
+    document.body.appendChild(img); // Force pre-render
+    img.style.display = "none";
   });
+}
 
   function updateProgress(loaded, total) {
     const progress = Math.floor((loaded / total) * 100);
     if (bar) bar.style.width = `${progress}%`;
     if (percent) percent.textContent = `${progress}%`;
   }
-}
 
 function playSound(id) {
   const sound = document.getElementById(id);
