@@ -37,34 +37,46 @@ function preloadImagesWithProgress(imageUrls, callback) {
   const bar = document.getElementById("loader-bar");
   const percent = document.getElementById("loader-percent");
 
-  if (total === 0) return callback();
+  const slowWarningTimeout = setTimeout(() => {
+    const spinner = document.getElementById("loader-spinner");
+    if (spinner) spinner.style.display = "flex";
+  }, 5000); // tampilkan warning jika loading lebih dari 5 detik
 
-  imageUrls.forEach((url) => {
-    const img = new Image();
-    img.style.display = "none";
-    document.body.appendChild(img);
-    const timeout = setTimeout(() => {
-      loaded++;
-      updateProgress();
-      if (loaded === total) callback();
-    }, 10000); // fallback
-
-    img.onload = img.onerror = () => {
-      clearTimeout(timeout);
-      loaded++;
-      updateProgress();
-      if (loaded === total) callback();
-    };
-
-    img.src = url;
-  });
+  if (total === 0) {
+    clearTimeout(slowWarningTimeout);
+    return callback();
+  }
 
   function updateProgress() {
     const progress = Math.floor((loaded / total) * 100);
     if (bar) bar.style.width = `${progress}%`;
     if (percent) percent.textContent = `${progress}%`;
   }
+
+  imageUrls.forEach((url) => {
+    const img = new Image();
+    const timeout = setTimeout(() => {
+      loaded++;
+      updateProgress();
+      if (loaded === total) {
+        clearTimeout(slowWarningTimeout);
+        callback();
+      }
+    }, 7000); // fallback tetap ada
+
+    img.onload = img.onerror = () => {
+      clearTimeout(timeout);
+      loaded++;
+      updateProgress();
+      if (loaded === total) {
+        clearTimeout(slowWarningTimeout);
+        callback();
+      }
+    };
+    img.src = url;
+  });
 }
+
 
 function playSound(id) {
   const sound = document.getElementById(id);
