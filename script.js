@@ -31,24 +31,30 @@ function playSound(id) {
 }
 
 function showBotComment(text) {
-  const comment = document.createElement("div");
-  comment.textContent = `🤖 ${text}`;
-  comment.style.position = "fixed";
-  comment.style.bottom = "20px";
-  comment.style.right = "20px";
-  comment.style.background = "#444";
-  comment.style.color = "#fff";
-  comment.style.padding = "0.8rem 1rem";
-  comment.style.borderRadius = "10px";
-  comment.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
-  comment.style.zIndex = 9999;
-  comment.style.opacity = 0;
-  comment.style.transition = "opacity 0.5s ease";
+  const cpuCard = document.getElementById("cpu-card");
+  if (!cpuCard) return;
 
-  document.body.appendChild(comment);
-  setTimeout(() => { comment.style.opacity = 1; }, 100);
-  setTimeout(() => { comment.style.opacity = 0; }, 2400);
-  setTimeout(() => { comment.remove(); }, 3000);
+  const bubble = document.createElement("div");
+  bubble.className = "bot-bubble";
+  bubble.textContent = text;
+  bubble.style.position = "absolute";
+  bubble.style.background = "#444";
+  bubble.style.color = "white";
+  bubble.style.padding = "6px 10px";
+  bubble.style.borderRadius = "10px";
+  bubble.style.fontSize = "0.9rem";
+  bubble.style.top = "-30px";
+  bubble.style.left = "50%";
+  bubble.style.transform = "translateX(-50%)";
+  bubble.style.boxShadow = "0 0 6px rgba(0,0,0,0.4)";
+  bubble.style.opacity = 0;
+  bubble.style.transition = "opacity 0.4s ease";
+
+  cpuCard.style.position = "relative";
+  cpuCard.appendChild(bubble);
+  setTimeout(() => bubble.style.opacity = 1, 50);
+  setTimeout(() => bubble.style.opacity = 0, 2000);
+  setTimeout(() => bubble.remove(), 2500);
 }
 
 function drawDraftPool(count) {
