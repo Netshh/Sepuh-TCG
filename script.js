@@ -39,32 +39,28 @@ function preloadImagesWithProgress(imageUrls, callback) {
 
   if (total === 0) return callback();
 
-  function updateProgress() {
+  imageUrls.forEach((url, i) => {
+    const img = new Image();
+    const timeout = setTimeout(() => {
+      loaded++;
+      updateProgress(loaded, total);
+      if (loaded === total) callback();
+    }, 5000);
+
+    img.onload = img.onerror = () => {
+      clearTimeout(timeout);
+      loaded++;
+      updateProgress(loaded, total);
+      if (loaded === total) callback();
+    };
+    img.src = url;
+  });
+
+  function updateProgress(loaded, total) {
     const progress = Math.floor((loaded / total) * 100);
     if (bar) bar.style.width = `${progress}%`;
     if (percent) percent.textContent = `${progress}%`;
-    if (loaded >= total) callback();
   }
-
-  imageUrls.forEach((url) => {
-    const img = new Image();
-    let done = false;
-
-    const markDone = () => {
-      if (done) return;
-      done = true;
-      loaded++;
-      updateProgress();
-    };
-
-    img.onload = markDone;
-    img.onerror = markDone;
-
-    // fallback manual untuk incognito mode
-    setTimeout(markDone, 5000);
-
-    img.src = url;
-  });
 }
 
 function playSound(id) {
