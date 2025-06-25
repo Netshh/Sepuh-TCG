@@ -37,22 +37,29 @@ function preloadImagesWithProgress(imageUrls, callback) {
   const bar = document.getElementById("loader-bar");
   const percent = document.getElementById("loader-percent");
 
+  function updateProgress() {
+    const progress = Math.floor((loaded / total) * 100);
+    if (bar) bar.style.width = `${progress}%`;
+    if (percent) percent.textContent = `${progress}%`;
+  }
+
   if (total === 0) return callback();
 
-  imageUrls.forEach((url, i) => {
+  imageUrls.forEach((url) => {
     const img = new Image();
     const timeout = setTimeout(() => {
       loaded++;
-      updateProgress(loaded, total);
+      updateProgress();
       if (loaded === total) callback();
-    }, 5000);
+    }, 7000); // fallback
 
     img.onload = img.onerror = () => {
       clearTimeout(timeout);
       loaded++;
-      updateProgress(loaded, total);
+      updateProgress();
       if (loaded === total) callback();
     };
+
     img.src = url;
   });
 
@@ -137,7 +144,7 @@ function startGame() {
   const loader = document.getElementById("loader-overlay");
   loader.style.display = "flex";
   const music = document.getElementById("bg-music");
-  const allImages = cards.map(c => c.image);
+  const allImages = cards.map((c) => c.image);
 
   preloadImagesWithProgress(allImages, () => {
     loader.style.display = "none";
