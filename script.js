@@ -37,21 +37,17 @@ function preloadImagesWithProgress(imageUrls, callback) {
   const bar = document.getElementById("loader-bar");
   const percent = document.getElementById("loader-percent");
 
-  function updateProgress() {
-    const progress = Math.floor((loaded / total) * 100);
-    if (bar) bar.style.width = `${progress}%`;
-    if (percent) percent.textContent = `${progress}%`;
-  }
-
   if (total === 0) return callback();
 
   imageUrls.forEach((url) => {
     const img = new Image();
+    img.style.display = "none";
+    document.body.appendChild(img);
     const timeout = setTimeout(() => {
       loaded++;
       updateProgress();
       if (loaded === total) callback();
-    }, 7000);
+    }, 10000); // fallback
 
     img.onload = img.onerror = () => {
       clearTimeout(timeout);
@@ -61,16 +57,14 @@ function preloadImagesWithProgress(imageUrls, callback) {
     };
 
     img.src = url;
-    document.body.appendChild(img); // Force pre-render
-    img.style.display = "none";
   });
-}
 
-  function updateProgress(loaded, total) {
+  function updateProgress() {
     const progress = Math.floor((loaded / total) * 100);
     if (bar) bar.style.width = `${progress}%`;
     if (percent) percent.textContent = `${progress}%`;
   }
+}
 
 function playSound(id) {
   const sound = document.getElementById(id);
@@ -87,18 +81,20 @@ function showBotComment(text) {
   const bubble = document.createElement("div");
   bubble.className = "bot-bubble";
   bubble.textContent = text;
-  bubble.style.position = "absolute";
-  bubble.style.background = "#444";
-  bubble.style.color = "white";
-  bubble.style.padding = "6px 10px";
-  bubble.style.borderRadius = "10px";
-  bubble.style.fontSize = "0.9rem";
-  bubble.style.top = "-30px";
-  bubble.style.left = "50%";
-  bubble.style.transform = "translateX(-50%)";
-  bubble.style.boxShadow = "0 0 6px rgba(0,0,0,0.4)";
-  bubble.style.opacity = 0;
-  bubble.style.transition = "opacity 0.4s ease";
+  Object.assign(bubble.style, {
+    position: "absolute",
+    background: "#444",
+    color: "white",
+    padding: "6px 10px",
+    borderRadius: "10px",
+    fontSize: "0.9rem",
+    top: "-30px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    boxShadow: "0 0 6px rgba(0,0,0,0.4)",
+    opacity: 0,
+    transition: "opacity 0.4s ease"
+  });
 
   cpuCard.style.position = "relative";
   cpuCard.appendChild(bubble);
@@ -146,7 +142,7 @@ function startGame() {
   const loader = document.getElementById("loader-overlay");
   loader.style.display = "flex";
   const music = document.getElementById("bg-music");
-  const allImages = cards.map((c) => c.image);
+  const allImages = cards.map(c => c.image);
 
   preloadImagesWithProgress(allImages, () => {
     loader.style.display = "none";
