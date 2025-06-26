@@ -43,33 +43,41 @@ function setupModeButtons() {
   if (multiBtn) {
     multiBtn.onclick = () => {
       isMultiplayer = true;
-      startGame();
+      startMultiplayer();
     };
   }
 }
 
 window.onload = () => {
-  document.getElementById("btn-vs-bot").onclick = () => {
-    isMultiplayer = false;
-    startGame();
-  };
-
-  document.getElementById("btn-multiplayer").onclick = () => {
-    isMultiplayer = true;
-    startMultiplayer();
-  };
+  setupModeButtons();
 };
 
-function startMultiplayer() {
+function startGame() {
   const loader = document.getElementById("loader-overlay");
   loader.style.display = "flex";
   const music = document.getElementById("bg-music");
-  const allImages = cards.map((c) => c.image);
+  const allImages = cards.map(c => c.image);
 
   preloadImagesWithProgress(allImages, () => {
     loader.style.display = "none";
     music.volume = 0.2;
     music.play().catch(() => alert("Klik dibutuhkan untuk memutar musik."));
+    document.getElementById("start-btns").style.display = "none";
+    startDraft();
+  });
+}
+
+function startMultiplayer() {
+  const loader = document.getElementById("loader-overlay");
+  loader.style.display = "flex";
+  const music = document.getElementById("bg-music");
+  const allImages = cards.map(c => c.image);
+
+  preloadImagesWithProgress(allImages, () => {
+    loader.style.display = "none";
+    music.volume = 0.2;
+    music.play().catch(() => alert("Klik dibutuhkan untuk memutar musik."));
+    document.getElementById("start-btns").style.display = "none";
 
     socket = io("https://sepuh-tcg-server.glitch.me");
     document.getElementById("result").textContent = "🔌 Menghubungkan ke server...";
