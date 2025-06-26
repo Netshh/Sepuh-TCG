@@ -1,4 +1,4 @@
-// ✅ FINAL script.js dengan tombol Multiplayer & Lawan Bot + Preview Kartu & Komentar Bot
+// ✅ FINAL script.js — Multiplayer, Bot, Loading, Animasi, Preview Lengkap
 
 let draftPool = [];
 let playerDeck = [];
@@ -29,61 +29,71 @@ const botComments = [
   "Rasakan Ini Tua!"
 ];
 
-function playSound(id) {
-  const sound = document.getElementById(id);
-  if (sound) {
-    sound.currentTime = 0;
-    sound.play();
-  }
-}
+window.addEventListener("load", () => {
+  const loader = document.getElementById("loader-overlay");
+  const music = document.getElementById("bg-music");
+  const allImages = cards.map(c => c.image);
 
-function showBotComment(text) {
-  const cpuCard = document.getElementById("cpu-card");
-  if (!cpuCard) return;
-  const bubble = document.createElement("div");
-  bubble.className = "bot-bubble";
-  bubble.textContent = text;
-  Object.assign(bubble.style, {
-    position: "absolute",
-    background: "#444",
-    color: "white",
-    padding: "6px 10px",
-    borderRadius: "10px",
-    fontSize: "0.9rem",
-    top: "-30px",
-    left: "50%",
-    transform: "translateX(-50%)",
-    boxShadow: "0 0 6px rgba(0,0,0,0.4)",
-    opacity: 0,
-    transition: "opacity 0.4s ease"
+  preloadImagesWithProgress(allImages, () => {
+    loader.style.display = "none";
+    music.volume = 0.2;
+    music.play().catch(() => console.log("🔇 Klik dibutuhkan untuk musik"));
+    document.getElementById("start-screen").style.display = "flex";
   });
-  cpuCard.style.position = "relative";
-  cpuCard.appendChild(bubble);
-  setTimeout(() => bubble.style.opacity = 1, 50);
-  setTimeout(() => bubble.style.opacity = 0, 2000);
-  setTimeout(() => bubble.remove(), 2500);
-}
+});
 
-function startBotGame() {
+document.getElementById("play-multiplayer").addEventListener("click", () => {
+  isMultiplayer = true;
+  connectMultiplayer();
+});
+
+document.getElementById("play-bot").addEventListener("click", () => {
   isMultiplayer = false;
   document.getElementById("start-screen").style.display = "none";
   startDraft();
+});
+
+function preloadImagesWithProgress(imageUrls, callback) {
+  let loaded = 0;
+  const total = imageUrls.length;
+  const bar = document.getElementById("loader-bar");
+  const percent = document.getElementById("loader-percent");
+
+  imageUrls.forEach((url) => {
+    const img = new Image();
+    const timeout = setTimeout(() => {
+      loaded++;
+      updateProgress();
+      if (loaded === total) callback();
+    }, 8000);
+
+    img.onload = img.onerror = () => {
+      clearTimeout(timeout);
+      loaded++;
+      updateProgress();
+      if (loaded === total) callback();
+    };
+
+    img.src = url;
+  });
+
+  function updateProgress() {
+    const progress = Math.floor((loaded / total) * 100);
+    if (bar) bar.style.width = `${progress}%`;
+    if (percent) percent.textContent = `${progress}%`;
+  }
 }
 
-function startMultiplayerGame() {
-  isMultiplayer = true;
+function connectMultiplayer() {
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("result").textContent = "🔌 Menghubungkan ke server...";
   socket = io("https://sepuh-tcg-server.glitch.me");
 
   socket.on("connect", () => {
-    console.log("Terkoneksi ke server:", socket.id);
     socket.emit("join_game");
-
     multiplayerTimeout = setTimeout(() => {
-      console.log("⏳ Tidak ada lawan, fallback ke bot.");
-      isMultiplayer = false;
       document.getElementById("result").textContent = "🤖 Bermain lawan Bot";
+      isMultiplayer = false;
       startDraft();
     }, 10000);
   });
@@ -95,7 +105,8 @@ function startMultiplayerGame() {
   socket.on("match_found", ({ room, players }) => {
     clearTimeout(multiplayerTimeout);
     document.getElementById("result").textContent = "🎮 Lawan ditemukan!";
-    opponentSocketId = players.find((id) => id !== socket.id);
+    isMultiplayer = true;
+    opponentSocketId = players.find(id => id !== socket.id);
     startDraft();
   });
 }
