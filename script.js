@@ -1,4 +1,25 @@
-// ✅ FINAL script.js FULLY FIXED dengan tombol Multiplayer & Lawan Bot, Preview Kartu, Animasi, dan Fix Loading
+// ✅ Update Online Multiplayer!
+// Hubungkan ke server multiplayer
+// Ganti URL dengan alamat server Glitch kamu
+const socket = io("https://sepuh-tcg-server.glitch.me");
+
+// Event saat terkoneksi
+socket.on("connect", () => {
+  console.log("🔌 Terkoneksi ke server:", socket.id);
+});
+
+// Event saat menunggu lawan
+socket.on("waiting", (msg) => {
+  console.log("🕒", msg);
+  document.getElementById("result").textContent = msg;
+});
+
+// Event saat match ditemukan
+socket.on("match_found", (data) => {
+  console.log("✅ Match ditemukan:", data);
+  document.getElementById("result").textContent = "🎮 Lawan ditemukan! Siap bertarung!";
+  // Lanjutkan ke logika multiplayer kamu di sini...
+});
 
 let draftPool = [];
 let playerDeck = [];
@@ -11,10 +32,6 @@ let cpuIndex = 0;
 let playerHP = 0;
 let cpuHP = 0;
 let isBattling = false;
-let isMultiplayer = false;
-let opponentSocketId = null;
-let socket = null;
-let multiplayerTimeout = null;
 
 const botComments = [
   "Hyaah! Serangan maut bot!",
@@ -29,6 +46,59 @@ const botComments = [
   "Rasakan Ini Tua!"
 ];
 
+// Loader overlay hide after load
+window.addEventListener("load", () => {
+  const loader = document.getElementById("loader-overlay");
+  if (loader) loader.style.display = "none";
+});
+
+function preloadImagesWithProgress(imageUrls, callback) {
+  let loaded = 0;
+  const total = imageUrls.length;
+  const bar = document.getElementById("loader-bar");
+  const percent = document.getElementById("loader-percent");
+
+  const slowWarningTimeout = setTimeout(() => {
+    const spinner = document.getElementById("loader-spinner");
+    if (spinner) spinner.style.display = "flex";
+  }, 5000); // tampilkan warning jika loading lebih dari 5 detik
+
+  if (total === 0) {
+    clearTimeout(slowWarningTimeout);
+    return callback();
+  }
+
+  function updateProgress() {
+    const progress = Math.floor((loaded / total) * 100);
+    if (bar) bar.style.width = `${progress}%`;
+    if (percent) percent.textContent = `${progress}%`;
+  }
+
+  imageUrls.forEach((url) => {
+    const img = new Image();
+    const timeout = setTimeout(() => {
+      loaded++;
+      updateProgress();
+      if (loaded === total) {
+        clearTimeout(slowWarningTimeout);
+        callback();
+      }
+    }, 7000); // fallback tetap ada
+
+    img.onload = img.onerror = () => {
+      clearTimeout(timeout);
+      loaded++;
+      updateProgress();
+      if (loaded === total) {
+        clearTimeout(slowWarningTimeout);
+        callback();
+      }
+    };
+    img.src = url;
+  });
+}
+
+
 function playSound(id) {
   const sound = document.getElementById(id);
   if (sound) {
@@ -40,6 +110,7 @@ function playSound(id) {
 function showBotComment(text) {
   const cpuCard = document.getElementById("cpu-card");
   if (!cpuCard) return;
+
   const bubble = document.createElement("div");
   bubble.className = "bot-bubble";
   bubble.textContent = text;
@@ -57,6 +128,7 @@ function showBotComment(text) {
     opacity: 0,
     transition: "opacity 0.4s ease"
   });
+
   cpuCard.style.position = "relative";
   cpuCard.appendChild(bubble);
   setTimeout(() => bubble.style.opacity = 1, 50);
@@ -64,167 +136,8 @@ function showBotComment(text) {
   setTimeout(() => bubble.remove(), 2500);
 }
 
-function preloadImagesWithProgress(imageUrls, callback) {
-  let loaded = 0;
-  const total = imageUrls.length;
-  const bar = document.getElementById("loader-bar");
-  const percent = document.getElementById("loader-percent");
-
-  function updateProgress() {
-    const progress = Math.floor((loaded / total) * 100);
-    if (bar) bar.style.width = progress + "%";
-    if (percent) percent.textContent = progress + "%";
-  }
-
-  if (total === 0) return callback();
-
-  imageUrls.forEach((url) => {
-    const img = new Image();
-    const timeout = setTimeout(() => {
-      loaded++;
-      updateProgress();
-      if (loaded === total) callback();
-    }, 7000);
-
-    img.onload = img.onerror = () => {
-      clearTimeout(timeout);
-      loaded++;
-      updateProgress();
-      if (loaded === total) callback();
-    };
-
-    img.src = url;
-  });
-}
-
-function setupModeButtons() {
-  document.getElementById("btn-vs-bot").onclick = () => {
-    isMultiplayer = false;
-    startGame();
-  };
-
-  document.getElementById("btn-multiplayer").onclick = () => {
-    isMultiplayer = true;
-    startGame();
-  };
-}
-
-function startGame() {
-  document.getElementById("start-btns").style.display = "none";
-  document.getElementById("result").textContent = "⏳ Loading asset...";
-  const loader = document.getElementById("loader-overlay");
-  loader.style.display = "flex";
-  const music = document.getElementById("bg-music");
-  const allImages = cards.map((c) => c.image);
-
-  preloadImagesWithProgress(allImages, () => {
-    loader.style.display = "none";
-    music.volume = 0.2;
-    music.play().catch(() => alert("Klik dibutuhkan untuk memutar musik."));
-    if (isMultiplayer) {
-      socket = io("https://sepuh-tcg-server.glitch.me");
-      document.getElementById("result").textContent = "🔌 Menghubungkan ke server...";
-      socket.on("connect", () => {
-        console.log("Terkoneksi ke server:", socket.id);
-        socket.emit("join_game");
-        multiplayerTimeout = setTimeout(() => {
-          document.getElementById("result").textContent = "🤖 Tidak ada lawan, kembali ke bot.";
-          isMultiplayer = false;
-          startDraft();
-        }, 10000);
-      });
-      socket.on("waiting", (msg) => {
-        document.getElementById("result").textContent = "🕒 " + msg;
-      });
-      socket.on("match_found", ({ room, players }) => {
-        clearTimeout(multiplayerTimeout);
-        document.getElementById("result").textContent = "🎮 Lawan ditemukan!";
-        opponentSocketId = players.find((id) => id !== socket.id);
-        startDraft();
-      });
-    } else {
-      startDraft();
-    }
-  });
-}
-
-function startDraft() {
-  draftPool = [...cards].sort(() => 0.5 - Math.random()).slice(0, 10);
-  playerDeck = [];
-  cpuDeck = [];
-  isDrafting = true;
-  isPlayerTurn = true;
-  renderDraftPool();
-}
-
-function renderDraftPool() {
-  const deckContainer = document.getElementById("deck");
-  deckContainer.innerHTML = "";
-  draftPool.forEach((card, index) => {
-    const cardDiv = document.createElement("div");
-    cardDiv.className = "card selectable-card";
-    cardDiv.innerHTML = `
-      <img src="${card.image}" alt="${card.name}" />
-      <h3>${card.name}</h3>
-      <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${card.hp}</p>
-    `;
-    cardDiv.querySelector("img").onclick = () => showCardPreview(card);
-    if (isDrafting && isPlayerTurn) {
-      cardDiv.onclick = () => pickCard(index);
-    }
-    deckContainer.appendChild(cardDiv);
-  });
-  updateDraftStatus();
-}
-
-function pickCard(index) {
-  if (!isPlayerTurn || !isDrafting) return;
-  const chosen = draftPool.splice(index, 1)[0];
-  playerDeck.push(chosen);
-  isPlayerTurn = false;
-  renderDraftPool();
-
-  if (!isMultiplayer) {
-    setTimeout(() => {
-      const randIndex = Math.floor(Math.random() * draftPool.length);
-      const botCard = draftPool.splice(randIndex, 1)[0];
-      cpuDeck.push(botCard);
-      renderDraftPool();
-      if (playerDeck.length + cpuDeck.length < 6) {
-        isPlayerTurn = true;
-        updateDraftStatus();
-      } else {
-        isDrafting = false;
-        updateDraftStatus();
-        startBattle();
-      }
-    }, 600);
-  } else {
-    socket.emit("player_pick", chosen);
-    document.getElementById("result").textContent = "Menunggu lawan memilih...";
-  }
-}
-
-function updateDraftStatus() {
-  const resultBox = document.getElementById("result");
-  if (isDrafting) {
-    resultBox.textContent = isPlayerTurn ? "🧍 Pilih kartu kamu" : "⌛ Menunggu...";
-  } else {
-    resultBox.textContent = "";
-  }
-}
-
-function startBattle() {
-  document.getElementById("deck").style.display = "none";
-  document.getElementById("battlefield").style.display = "flex";
-  playerIndex = 0;
-  cpuIndex = 0;
-  playerHP = playerDeck[playerIndex].hp;
-  cpuHP = (isMultiplayer ? playerDeck : cpuDeck)[cpuIndex].hp;
-  renderCard(playerDeck[playerIndex], "player-card", playerHP);
-  renderCard((isMultiplayer ? playerDeck : cpuDeck)[cpuIndex], "cpu-card", cpuHP);
-  isBattling = true;
-  setTimeout(() => duelTurn(), 1000);
+function drawDraftPool(count) {
+  return [...cards].sort(() => 0.5 - Math.random()).slice(0, count);
 }
 
 function renderCard(card, targetId, overrideHP = null) {
@@ -234,6 +147,7 @@ function renderCard(card, targetId, overrideHP = null) {
   let hpClass = "hp-high";
   if (hpPercent <= 60) hpClass = "hp-medium";
   if (hpPercent <= 30) hpClass = "hp-low";
+
   target.innerHTML = `
     <img src="${card.image}" alt="${card.name}" />
     <h3>${card.name}</h3>
@@ -257,25 +171,189 @@ function updateHPBar(targetId, newHP) {
   }
 }
 
+function startGame() {
+  const loader = document.getElementById("loader-overlay");
+  loader.style.display = "flex";
+  const music = document.getElementById("bg-music");
+  const allImages = cards.map(c => c.image);
+
+  preloadImagesWithProgress(allImages, () => {
+    loader.style.display = "none";
+    music.volume = 0.2;
+    music.play().catch(() => alert("Klik dibutuhkan untuk memutar musik."));
+    document.getElementById("start-btn").style.display = "none";
+    startDraft();
+  });
+}
+
+function startDraft() {
+  draftPool = drawDraftPool(10);
+  playerDeck = [];
+  cpuDeck = [];
+  isDrafting = true;
+  isPlayerTurn = true;
+  renderDraftPool();
+  updateDraftDeckSlots();
+}
+
+function renderDraftPool() {
+  const deckContainer = document.getElementById("deck");
+  deckContainer.innerHTML = "";
+
+  draftPool.forEach((card, index) => {
+    const cardDiv = document.createElement("div");
+    cardDiv.className = "card selectable-card";
+    cardDiv.innerHTML = `
+      <img src="${card.image}" alt="${card.name}" />
+      <h3>${card.name}</h3>
+      <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${card.hp}</p>
+    `;
+    if (isDrafting) {
+      cardDiv.addEventListener("click", () => onCardClick(index, cardDiv));
+    }
+    deckContainer.appendChild(cardDiv);
+  });
+
+  updateDraftStatus();
+}
+
+function onCardClick(index, cardDiv) {
+  if (!isPlayerTurn || !isDrafting) return;
+  isPlayerTurn = false;
+  const chosen = draftPool.splice(index, 1)[0];
+  playerDeck.push(chosen);
+  animateCardToDeck(cardDiv, 'player');
+  renderDraftPool();
+  updateDraftDeckSlots();
+
+  setTimeout(() => {
+    const randIndex = Math.floor(Math.random() * draftPool.length);
+    const botCard = document.querySelectorAll(".card")[randIndex];
+    const botChoice = draftPool.splice(randIndex, 1)[0];
+    cpuDeck.push(botChoice);
+    animateCardToDeck(botCard, 'cpu');
+    renderDraftPool();
+    updateDraftDeckSlots();
+
+    if (playerDeck.length + cpuDeck.length < 6) {
+      isPlayerTurn = true;
+      updateDraftStatus();
+    } else {
+      isDrafting = false;
+      updateDraftStatus();
+      showAllTeams();
+      setTimeout(() => {
+        document.getElementById("deck").style.display = "none";
+        document.getElementById("battlefield").style.display = "flex";
+        startSurvivalDuel();
+      }, 2000);
+    }
+  }, 600);
+}
+
+function updateDraftStatus() {
+  const resultBox = document.getElementById("result");
+  if (isDrafting) {
+    resultBox.textContent = isPlayerTurn ? "🧍 Giliran Kamu Memilih Kartu" : "🤖 Bot sedang memilih...";
+  } else {
+    resultBox.textContent = "";
+  }
+}
+
+function updateDraftDeckSlots() {
+  const draftVisual = document.getElementById("draft-visual");
+  if (!draftVisual) return;
+  draftVisual.innerHTML = `
+    <div class="draft-row">
+      <h3>🧍 Kamu</h3>
+      <div class="draft-deck" id="player-draft">
+        ${[0,1,2].map(i => `<div class="deck-slot" id="p-slot-${i}">${playerDeck[i] ? `<img src="${playerDeck[i].image}" />` : ''}</div>`).join('')}
+      </div>
+    </div>
+    <div class="draft-row">
+      <h3>🤖 Bot</h3>
+      <div class="draft-deck" id="cpu-draft">
+        ${[0,1,2].map(i => `<div class="deck-slot" id="c-slot-${i}">${cpuDeck[i] ? `<img src="${cpuDeck[i].image}" />` : ''}</div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function animateCardToDeck(cardElement, owner) {
+  const clone = cardElement.cloneNode(true);
+  const rect = cardElement.getBoundingClientRect();
+  const targetIndex = owner === 'player' ? playerDeck.length - 1 : cpuDeck.length - 1;
+  const targetSlot = document.getElementById(`${owner === 'player' ? 'p' : 'c'}-slot-${targetIndex}`);
+  if (!targetSlot) return;
+  const slotRect = targetSlot.getBoundingClientRect();
+  clone.style.position = 'fixed';
+  clone.style.top = `${rect.top}px`;
+  clone.style.left = `${rect.left}px`;
+  clone.style.width = `${rect.width}px`;
+  clone.style.zIndex = 10000;
+  clone.classList.add("floating-card");
+  document.body.appendChild(clone);
+  requestAnimationFrame(() => {
+    clone.style.transition = 'all 0.6s ease';
+    clone.style.top = `${slotRect.top}px`;
+    clone.style.left = `${slotRect.left}px`;
+    clone.style.width = `${slotRect.width}px`;
+  });
+  setTimeout(() => {
+    clone.remove();
+    updateDraftDeckSlots();
+  }, 700);
+}
+
+function showAllTeams() {
+  const container = document.createElement("div");
+  container.className = "card-grid";
+  container.innerHTML = `
+    <div class="card-section">
+      <div class="label">🧍 Player</div>
+      ${playerDeck.map(card => `<div class="card"><img src="${card.image}" alt="${card.name}" title="${card.name}" /></div>`).join('')}
+    </div>
+    <div class="card-section">
+      <div class="label">🤖 Bot</div>
+      ${cpuDeck.map(card => `<div class="card"><img src="${card.image}" alt="${card.name}" title="${card.name}" /></div>`).join('')}
+    </div>
+  `;
+  document.body.insertBefore(container, document.getElementById("battlefield"));
+}
+
+function startSurvivalDuel() {
+  playerIndex = 0;
+  cpuIndex = 0;
+  playerHP = playerDeck[playerIndex].hp;
+  cpuHP = cpuDeck[cpuIndex].hp;
+  renderCard(playerDeck[playerIndex], "player-card", playerHP);
+  renderCard(cpuDeck[cpuIndex], "cpu-card", cpuHP);
+  isBattling = true;
+  setTimeout(() => duelTurn(), 1000);
+}
+
 function duelTurn() {
   if (!isBattling) return;
   cpuHP = Math.max(0, cpuHP - playerDeck[playerIndex].attack);
   updateHPBar("cpu-card", cpuHP);
+
   setTimeout(() => {
     if (cpuHP <= 0) {
       cpuIndex++;
-      if (cpuIndex >= (isMultiplayer ? playerDeck.length : cpuDeck.length)) return declareVictory("player");
-      cpuHP = (isMultiplayer ? playerDeck : cpuDeck)[cpuIndex].hp;
-      renderCard((isMultiplayer ? playerDeck : cpuDeck)[cpuIndex], "cpu-card", cpuHP);
-    } else if (!isMultiplayer) {
+      if (cpuIndex >= cpuDeck.length) return declareVictory("player");
+      cpuHP = cpuDeck[cpuIndex].hp;
+      renderCard(cpuDeck[cpuIndex], "cpu-card", cpuHP);
+      showBotComment("Kartu berikutnya... masih ada! 😤");
+    } else {
       const randomTalk = botComments[Math.floor(Math.random() * botComments.length)];
       showBotComment(randomTalk);
     }
   }, 300);
 
   setTimeout(() => {
-    playerHP = Math.max(0, playerHP - (isMultiplayer ? playerDeck[cpuIndex].attack : cpuDeck[cpuIndex].attack));
+    playerHP = Math.max(0, playerHP - cpuDeck[cpuIndex].attack);
     updateHPBar("player-card", playerHP);
+
     setTimeout(() => {
       if (playerHP <= 0) {
         playerIndex++;
@@ -297,43 +375,73 @@ function declareVictory(winner) {
     resultBox.textContent = "🏆 Kamu Menang!";
     resultBox.classList.add("win");
     playSound("win-sound");
-    if (!isMultiplayer) showBotComment("Arrghh! Abah kalah! Kamu kuat juga... 😵");
+    showBotComment("Arrghh! Abah kalah! Kamu kuat juga... 😵");
   } else {
     resultBox.textContent = "💀 Kamu Kalah!";
     resultBox.classList.add("lose");
     playSound("lose-sound");
-    if (!isMultiplayer) showBotComment("Hehe! Dasar sepuh pensiunan! 😎");
+    showBotComment("Hehe! Dasar sepuh pensiunan! 😎");
   }
   document.getElementById("reset-btn").style.display = "inline-block";
+  enableCardPreview();
 }
 
-function showCardPreview(card) {
+function enableCardPreview() {
+  const allCardDivs = document.querySelectorAll(".card img");
+  allCardDivs.forEach(img => {
+    img.style.cursor = "zoom-in";
+    img.onclick = () => {
+      const parent = img.parentElement;
+      const name = parent.querySelector("h3")?.textContent || "";
+      const desc = parent.querySelector("p")?.textContent || "";
+      const stats = parent.querySelectorAll("p")[1]?.textContent || "";
+      showCardPreview(img.src, name, stats, desc);
+    };
+  });
+}
+
+function showCardPreview(image, name, stats, desc) {
   let existing = document.getElementById("card-preview-overlay");
   if (existing) existing.remove();
   const overlay = document.createElement("div");
   overlay.id = "card-preview-overlay";
-  Object.assign(overlay.style, {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100vw",
-    height: "100vh",
-    background: "rgba(0,0,0,0.8)",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 9999
-  });
+  overlay.style.position = "fixed";
+  overlay.style.top = 0;
+  overlay.style.left = 0;
+  overlay.style.width = "100vw";
+  overlay.style.height = "100vh";
+  overlay.style.background = "rgba(0,0,0,0.8)";
+  overlay.style.display = "flex";
+  overlay.style.flexDirection = "column";
+  overlay.style.justifyContent = "center";
+  overlay.style.alignItems = "center";
+  overlay.style.zIndex = 9999;
   const cardBox = document.createElement("div");
-  cardBox.style = "background:#222;padding:1rem;border-radius:10px;color:#fff;text-align:center;max-width:90%";
-  cardBox.innerHTML = `
-    <img src="${card.image}" style="max-width:300px;border-radius:10px" />
-    <h2>${card.name}</h2>
-    <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${card.hp}</p>
-    <p>${card.description}</p>
-    <button onclick="document.getElementById('card-preview-overlay').remove()">Tutup</button>
-  `;
+  cardBox.style.background = "#222";
+  cardBox.style.padding = "1rem";
+  cardBox.style.borderRadius = "10px";
+  cardBox.style.maxWidth = "90%";
+  cardBox.style.color = "#fff";
+  cardBox.style.textAlign = "center";
+  const img = document.createElement("img");
+  img.src = image;
+  img.style.maxWidth = "300px";
+  img.style.borderRadius = "10px";
+  const title = document.createElement("h2");
+  title.textContent = name;
+  const stat = document.createElement("p");
+  stat.innerHTML = `<strong>${stats}</strong>`;
+  const detail = document.createElement("p");
+  detail.textContent = desc;
+  const close = document.createElement("button");
+  close.textContent = "Tutup";
+  close.style.marginTop = "1rem";
+  close.onclick = () => overlay.remove();
+  cardBox.appendChild(img);
+  cardBox.appendChild(title);
+  cardBox.appendChild(stat);
+  cardBox.appendChild(detail);
+  cardBox.appendChild(close);
   overlay.appendChild(cardBox);
   document.body.appendChild(overlay);
 }
@@ -345,18 +453,13 @@ function resetGame() {
   playerIndex = 0;
   cpuIndex = 0;
   isGameOver = false;
-  isMultiplayer = false;
   document.getElementById("deck").style.display = "flex";
   document.getElementById("result").textContent = "";
   document.getElementById("reset-btn").style.display = "none";
   document.getElementById("battlefield").style.display = "none";
-  document.getElementById("start-btns").style.display = "flex";
+  const overlay = document.getElementById("card-preview-overlay");
+  if (overlay) overlay.remove();
+  const draftVisual = document.getElementById("draft-visual");
+  if (draftVisual) draftVisual.innerHTML = "";
+  startDraft();
 }
-
-window.onload = () => {
-  if (!window.cards || !Array.isArray(cards)) {
-    alert("❌ Gagal memuat kartu! Pastikan data.js dimuat sebelum script.js");
-    return;
-  }
-  setupModeButtons();
-};
