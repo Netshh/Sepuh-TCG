@@ -1,20 +1,4 @@
-// Event saat terkoneksi
-socket.on("connect", () => {
-  console.log("🔌 Terkoneksi ke server:", socket.id);
-});
-
-// Event saat menunggu lawan
-socket.on("waiting", (msg) => {
-  console.log("🕒", msg);
-  document.getElementById("result").textContent = msg;
-});
-
-// Event saat match ditemukan
-socket.on("match_found", (data) => {
-  console.log("✅ Match ditemukan:", data);
-  document.getElementById("result").textContent = "🎮 Lawan ditemukan! Siap bertarung!";
-  // Lanjutkan ke logika multiplayer kamu di sini...
-});
+// ✅ FINAL script.js dengan Multiplayer & Bot Mode, Card Preview, dan Fix Socket Scope
 
 let draftPool = [];
 let playerDeck = [];
@@ -27,6 +11,10 @@ let cpuIndex = 0;
 let playerHP = 0;
 let cpuHP = 0;
 let isBattling = false;
+let isMultiplayer = false;
+let socket = null;
+let opponentSocketId = null;
+let multiplayerTimeout = null;
 
 const botComments = [
   "Hyaah! Serangan maut bot!",
@@ -40,6 +28,56 @@ const botComments = [
   "bajingan!",
   "Rasakan Ini Tua!"
 ];
+
+window.onload = () => {
+  document.getElementById("btn-vs-bot").onclick = () => {
+    isMultiplayer = false;
+    startGame();
+  };
+
+  document.getElementById("btn-multiplayer").onclick = () => {
+    isMultiplayer = true;
+    startMultiplayer();
+  };
+};
+
+function startMultiplayer() {
+  const loader = document.getElementById("loader-overlay");
+  loader.style.display = "flex";
+  const music = document.getElementById("bg-music");
+  const allImages = cards.map((c) => c.image);
+
+  preloadImagesWithProgress(allImages, () => {
+    loader.style.display = "none";
+    music.volume = 0.2;
+    music.play().catch(() => alert("Klik dibutuhkan untuk memutar musik."));
+
+    socket = io("https://sepuh-tcg-server.glitch.me");
+    document.getElementById("result").textContent = "🔌 Menghubungkan ke server...";
+
+    socket.on("connect", () => {
+      console.log("🔌 Terkoneksi ke server:", socket.id);
+      socket.emit("join_game");
+
+      multiplayerTimeout = setTimeout(() => {
+        document.getElementById("result").textContent = "🤖 Tidak ada lawan, kembali ke bot.";
+        isMultiplayer = false;
+        startDraft();
+      }, 10000);
+    });
+
+    socket.on("waiting", (msg) => {
+      document.getElementById("result").textContent = "🕒 " + msg;
+    });
+
+    socket.on("match_found", ({ room, players }) => {
+      clearTimeout(multiplayerTimeout);
+      document.getElementById("result").textContent = "🎮 Lawan ditemukan!";
+      opponentSocketId = players.find((id) => id !== socket.id);
+      startDraft();
+    });
+  });
+}
 
 // Loader overlay hide after load
 window.addEventListener("load", () => {
@@ -494,15 +532,3 @@ function resetGame() {
   if (draftVisual) draftVisual.innerHTML = "";
   startDraft();
 }
-
-window.onload = () => {
-  document.getElementById("btn-vs-bot").onclick = () => {
-    isMultiplayer = false;
-    startGame();
-  };
-
-  document.getElementById("btn-multiplayer").onclick = () => {
-    isMultiplayer = true;
-    startMultiplayer();
-  };
-};
