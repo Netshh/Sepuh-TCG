@@ -29,6 +29,25 @@ const botComments = [
   "Rasakan Ini Tua!"
 ];
 
+function setupModeButtons() {
+  const botBtn = document.getElementById("btn-vs-bot");
+  const multiBtn = document.getElementById("btn-multiplayer");
+
+  if (botBtn) {
+    botBtn.onclick = () => {
+      isMultiplayer = false;
+      startGame();
+    };
+  }
+
+  if (multiBtn) {
+    multiBtn.onclick = () => {
+      isMultiplayer = true;
+      startGame();
+    };
+  }
+}
+
 window.onload = () => {
   document.getElementById("btn-vs-bot").onclick = () => {
     isMultiplayer = false;
@@ -532,3 +551,7 @@ function resetGame() {
   if (draftVisual) draftVisual.innerHTML = "";
   startDraft();
 }
+
+window.onload = () => {
+  setupModeButtons();
+};
