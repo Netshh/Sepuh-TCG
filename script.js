@@ -1,8 +1,3 @@
-// ✅ Update Online Multiplayer!
-// Hubungkan ke server multiplayer
-// Ganti URL dengan alamat server Glitch kamu
-const socket = io("https://sepuh-tcg-server.glitch.me");
-
 // Event saat terkoneksi
 socket.on("connect", () => {
   console.log("🔌 Terkoneksi ke server:", socket.id);
@@ -98,6 +93,42 @@ function preloadImagesWithProgress(imageUrls, callback) {
   });
 }
 
+function startMultiplayer() {
+  const loader = document.getElementById("loader-overlay");
+  loader.style.display = "flex";
+  const music = document.getElementById("bg-music");
+  const allImages = cards.map(c => c.image);
+
+  preloadImagesWithProgress(allImages, () => {
+    loader.style.display = "none";
+    music.volume = 0.2;
+    music.play().catch(() => alert("Klik dibutuhkan untuk memutar musik."));
+
+    const socket = io("https://sepuh-tcg-server.glitch.me");
+
+    document.getElementById("result").textContent = "🔌 Menghubungkan ke server...";
+
+    socket.on("connect", () => {
+      console.log("🔌 Terkoneksi ke server:", socket.id);
+      socket.emit("join_game");
+
+      setTimeout(() => {
+        document.getElementById("result").textContent = "🤖 Tidak ada lawan, kembali ke bot.";
+        isMultiplayer = false;
+        startDraft();
+      }, 10000);
+    });
+
+    socket.on("waiting", (msg) => {
+      document.getElementById("result").textContent = "🕒 " + msg;
+    });
+
+    socket.on("match_found", ({ room, players }) => {
+      document.getElementById("result").textContent = "🎮 Lawan ditemukan!";
+      startDraft(); // ganti dengan logika match multiplayer nanti
+    });
+  });
+}
 
 function playSound(id) {
   const sound = document.getElementById(id);
@@ -463,3 +494,15 @@ function resetGame() {
   if (draftVisual) draftVisual.innerHTML = "";
   startDraft();
 }
+
+window.onload = () => {
+  document.getElementById("btn-vs-bot").onclick = () => {
+    isMultiplayer = false;
+    startGame();
+  };
+
+  document.getElementById("btn-multiplayer").onclick = () => {
+    isMultiplayer = true;
+    startMultiplayer();
+  };
+};
