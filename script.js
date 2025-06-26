@@ -1,4 +1,4 @@
-// ✅ FINAL script.js — Multiplayer, Bot, Loading, Animasi, Preview Lengkap
+// ✅ FINAL script.js dengan Mode Multiplayer dan Lawan Bot Fix UI dan Interaksi Tombol
 
 let draftPool = [];
 let playerDeck = [];
@@ -15,6 +15,7 @@ let isMultiplayer = false;
 let opponentSocketId = null;
 let socket = null;
 let multiplayerTimeout = null;
+let gameMode = null;
 
 const botComments = [
   "Hyaah! Serangan maut bot!",
@@ -29,70 +30,44 @@ const botComments = [
   "Rasakan Ini Tua!"
 ];
 
-window.addEventListener("load", () => {
-  const loader = document.getElementById("loader-overlay");
-  const music = document.getElementById("bg-music");
-  const allImages = cards.map(c => c.image);
+function initButtons() {
+  const btnBot = document.getElementById("play-bot");
+  const btnMultiplayer = document.getElementById("play-multiplayer");
+  const btnStart = document.getElementById("start-btn");
 
-  preloadImagesWithProgress(allImages, () => {
-    loader.style.display = "none";
-    music.volume = 0.2;
-    music.play().catch(() => console.log("🔇 Klik dibutuhkan untuk musik"));
-    document.getElementById("start-screen").style.display = "flex";
-  });
-});
-
-document.getElementById("play-multiplayer").addEventListener("click", () => {
-  isMultiplayer = true;
-  connectMultiplayer();
-});
-
-document.getElementById("play-bot").addEventListener("click", () => {
-  isMultiplayer = false;
-  document.getElementById("start-screen").style.display = "none";
-  startDraft();
-});
-
-function preloadImagesWithProgress(imageUrls, callback) {
-  let loaded = 0;
-  const total = imageUrls.length;
-  const bar = document.getElementById("loader-bar");
-  const percent = document.getElementById("loader-percent");
-
-  imageUrls.forEach((url) => {
-    const img = new Image();
-    const timeout = setTimeout(() => {
-      loaded++;
-      updateProgress();
-      if (loaded === total) callback();
-    }, 8000);
-
-    img.onload = img.onerror = () => {
-      clearTimeout(timeout);
-      loaded++;
-      updateProgress();
-      if (loaded === total) callback();
-    };
-
-    img.src = url;
+  btnBot.addEventListener("click", () => {
+    gameMode = "bot";
+    document.getElementById("result").textContent = "🤖 Mode: Lawan Bot";
+    btnStart.style.display = "inline-block";
   });
 
-  function updateProgress() {
-    const progress = Math.floor((loaded / total) * 100);
-    if (bar) bar.style.width = `${progress}%`;
-    if (percent) percent.textContent = `${progress}%`;
-  }
+  btnMultiplayer.addEventListener("click", () => {
+    gameMode = "multiplayer";
+    document.getElementById("result").textContent = "🎮 Mode: Multiplayer";
+    btnStart.style.display = "inline-block";
+  });
+
+  btnStart.addEventListener("click", () => {
+    btnStart.style.display = "none";
+    if (gameMode === "bot") {
+      isMultiplayer = false;
+      startDraft();
+    } else {
+      connectMultiplayer();
+    }
+  });
 }
 
 function connectMultiplayer() {
-  document.getElementById("start-screen").style.display = "none";
   document.getElementById("result").textContent = "🔌 Menghubungkan ke server...";
   socket = io("https://sepuh-tcg-server.glitch.me");
 
   socket.on("connect", () => {
+    console.log("Terkoneksi ke server:", socket.id);
     socket.emit("join_game");
     multiplayerTimeout = setTimeout(() => {
-      document.getElementById("result").textContent = "🤖 Bermain lawan Bot";
+      console.log("⏳ Tidak ada lawan, main vs Bot.");
+      document.getElementById("result").textContent = "🤖 Tidak ada lawan, bermain melawan Bot.";
       isMultiplayer = false;
       startDraft();
     }, 10000);
@@ -106,7 +81,7 @@ function connectMultiplayer() {
     clearTimeout(multiplayerTimeout);
     document.getElementById("result").textContent = "🎮 Lawan ditemukan!";
     isMultiplayer = true;
-    opponentSocketId = players.find(id => id !== socket.id);
+    opponentSocketId = players.find((id) => id !== socket.id);
     startDraft();
   });
 }
@@ -132,15 +107,14 @@ function renderDraftPool() {
       <p><strong>ATK:</strong> ${card.attack} | <strong>HP:</strong> ${card.hp}</p>
     `;
     if (isDrafting && isPlayerTurn) {
-      cardDiv.addEventListener("click", () => pickCard(index));
+      cardDiv.addEventListener("click", () => pickCard(index, cardDiv));
     }
     deckContainer.appendChild(cardDiv);
   });
   updateDraftStatus();
-  enableCardPreview();
 }
 
-function pickCard(index) {
+function pickCard(index, cardDiv) {
   if (!isPlayerTurn || !isDrafting) return;
   const chosen = draftPool.splice(index, 1)[0];
   playerDeck.push(chosen);
@@ -270,71 +244,6 @@ function declareVictory(winner) {
     if (!isMultiplayer) showBotComment("Hehe! Dasar sepuh pensiunan! 😎");
   }
   document.getElementById("reset-btn").style.display = "inline-block";
-  enableCardPreview();
-}
-
-function enableCardPreview() {
-  const allCardDivs = document.querySelectorAll(".card img");
-  allCardDivs.forEach(img => {
-    img.style.cursor = "zoom-in";
-    img.onclick = () => {
-      const parent = img.parentElement;
-      const name = parent.querySelector("h3")?.textContent || "";
-      const desc = parent.querySelector("p")?.textContent || "";
-      const stats = parent.querySelectorAll("p")[1]?.textContent || "";
-      showCardPreview(img.src, name, stats, desc);
-    };
-  });
-}
-
-function showCardPreview(image, name, stats, desc) {
-  let existing = document.getElementById("card-preview-overlay");
-  if (existing) existing.remove();
-  const overlay = document.createElement("div");
-  overlay.id = "card-preview-overlay";
-  Object.assign(overlay.style, {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100vw",
-    height: "100vh",
-    background: "rgba(0,0,0,0.8)",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 9999
-  });
-  const cardBox = document.createElement("div");
-  Object.assign(cardBox.style, {
-    background: "#222",
-    padding: "1rem",
-    borderRadius: "10px",
-    maxWidth: "90%",
-    color: "#fff",
-    textAlign: "center"
-  });
-  const img = document.createElement("img");
-  img.src = image;
-  img.style.maxWidth = "300px";
-  img.style.borderRadius = "10px";
-  const title = document.createElement("h2");
-  title.textContent = name;
-  const stat = document.createElement("p");
-  stat.innerHTML = `<strong>${stats}</strong>`;
-  const detail = document.createElement("p");
-  detail.textContent = desc;
-  const close = document.createElement("button");
-  close.textContent = "Tutup";
-  close.style.marginTop = "1rem";
-  close.onclick = () => overlay.remove();
-  cardBox.appendChild(img);
-  cardBox.appendChild(title);
-  cardBox.appendChild(stat);
-  cardBox.appendChild(detail);
-  cardBox.appendChild(close);
-  overlay.appendChild(cardBox);
-  document.body.appendChild(overlay);
 }
 
 function resetGame() {
@@ -349,5 +258,8 @@ function resetGame() {
   document.getElementById("result").textContent = "";
   document.getElementById("reset-btn").style.display = "none";
   document.getElementById("battlefield").style.display = "none";
-  document.getElementById("start-screen").style.display = "block";
+  document.getElementById("start-btn").style.display = "none";
+  document.getElementById("mode-buttons").style.display = "block";
 }
+
+window.addEventListener("DOMContentLoaded", initButtons);
