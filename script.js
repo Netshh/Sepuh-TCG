@@ -1,5 +1,4 @@
-
-// ✅ FINAL script.js dengan Multiplayer & Bot Mode + Card Preview + Animasi + Fix Loading
+// ✅ FINAL script.js FULLY FIXED dengan tombol Multiplayer & Lawan Bot, Preview Kartu, Animasi, dan Fix Loading
 
 let draftPool = [];
 let playerDeck = [];
@@ -354,4 +353,10 @@ function resetGame() {
   document.getElementById("start-btns").style.display = "flex";
 }
 
-window.onload = () => setupModeButtons();
+window.onload = () => {
+  if (!window.cards || !Array.isArray(cards)) {
+    alert("❌ Gagal memuat kartu! Pastikan data.js dimuat sebelum script.js");
+    return;
+  }
+  setupModeButtons();
+};

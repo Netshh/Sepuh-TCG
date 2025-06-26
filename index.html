@@ -31,9 +31,9 @@
   <audio id="draw-sound" src="audio/draw.mp3"></audio>
 
   <!-- Menu awal -->
-  <div id="start-screen" style="display:flex;justify-content:center;gap:1rem;margin:2rem 0;">
-    <button id="btn-bot" onclick="startBotGame()" style="padding:1rem 2rem;font-size:1.2rem;">🧠 Lawan Bot</button>
-    <button id="btn-multi" onclick="startMultiplayerGame()" style="padding:1rem 2rem;font-size:1.2rem;">🌐 Multiplayer</button>
+  <div id="start-btns" style="display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-top: 2rem;">
+  <button id="btn-vs-bot" style="padding: 1rem 2rem; font-size: 1.5rem;">🤖 Lawan Bot</button>
+  <button id="btn-multiplayer" style="padding: 1rem 2rem; font-size: 1.5rem;">🌐 Multiplayer</button>
   </div>
 
   <!-- Draft & Deck -->
@@ -61,6 +61,7 @@
 
   <!-- Script -->
   <script src="data.js"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
