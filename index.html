@@ -4,46 +4,44 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Sepuh TCG – Turn Battle</title>
-  
-  <!-- 🔗 Link ke file CSS eksternal yang sudah mengatur background PNG -->
   <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <body>
-<div id="loader-overlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.2rem;z-index:9999">
-  <div id="loader-spinner" style="display:none;flex-direction:column;align-items:center;margin-top:1rem;">
-  <div class="spinner"></div>
-  <p style="margin-top:0.5rem;color:#ccc;">💤 Internet kamu lelet kayak sepuh...</p>
-</div>
-  <div style="margin-bottom:1rem;">🔄 Memuat asset Sepuh TCG...</div>
-  <div style="width:200px;height:10px;background:#333;border-radius:5px;overflow:hidden">
-    <div id="loader-bar" style="width:0%;height:100%;background:#2ecc71"></div>
+  <!-- Loader -->
+  <div id="loader-overlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.2rem;z-index:9999">
+    <div id="loader-spinner" style="display:none;flex-direction:column;align-items:center;margin-top:1rem;">
+      <div class="spinner"></div>
+      <p style="margin-top:0.5rem;color:#ccc;">💤 Internet kamu lelet kayak sepuh...</p>
+    </div>
+    <div style="margin-bottom:1rem;">🔄 Memuat asset Sepuh TCG...</div>
+    <div style="width:200px;height:10px;background:#333;border-radius:5px;overflow:hidden">
+      <div id="loader-bar" style="width:0%;height:100%;background:#2ecc71"></div>
+    </div>
+    <div id="loader-percent" style="margin-top:0.5rem;">0%</div>
   </div>
-  <div id="loader-percent" style="margin-top:0.5rem;">0%</div>
-</div>
+
   <h1>🧓 Sepuh TCG – Deck Battle</h1>
 
-  <!-- 🔊 Semua audio -->
+  <!-- 🔊 Audio -->
   <audio id="bg-music" src="audio/battle.mp3" loop></audio>
   <audio id="click-sound" src="audio/click.mp3"></audio>
   <audio id="win-sound" src="audio/win.mp3"></audio>
   <audio id="lose-sound" src="audio/lose.mp3"></audio>
   <audio id="draw-sound" src="audio/draw.mp3"></audio>
 
-  <div id="start-screen">
-  <button id="btn-bot">Lawan Bot</button>
-  <button id="btn-multi">Multiplayer</button>
-</div>
+  <!-- Menu awal -->
+  <div id="start-screen" style="display:flex;justify-content:center;gap:1rem;margin:2rem 0;">
+    <button id="btn-bot" onclick="startBotGame()" style="padding:1rem 2rem;font-size:1.2rem;">🧠 Lawan Bot</button>
+    <button id="btn-multi" onclick="startMultiplayerGame()" style="padding:1rem 2rem;font-size:1.2rem;">🌐 Multiplayer</button>
+  </div>
 
-  <!-- 🎮 Tombol mulai game untuk trigger musik dan tampilkan deck -->
-  <button id="start-btn" onclick="startGame()">Mulai Game 🎮</button>
-  <button id="confirm-deck-btn" onclick="confirmDeck()" style="display:none;">✅ Gunakan Kartu Ini</button>  
-
+  <!-- Draft & Deck -->
   <h2>Pilih Kartu:</h2>
   <div id="draft-visual"></div>
   <div id="deck" class="card-grid"></div>
 
-  <!-- 🧱 Arena pertarungan -->
+  <!-- Arena -->
   <div id="battlefield">
     <div class="card-section">
       <div class="label">🧍 Player</div>
@@ -56,15 +54,13 @@
     </div>
   </div>
 
-  <!-- 🏆 Hasil & tombol ulang -->
+  <!-- Hasil dan Reset -->
   <h2 id="result"></h2>
   <h2 id="final-score" style="display:none;"></h2>
-  <button id="reset-btn" style="display:none;" onclick="resetGame()">Main Lagi 🔁</button>
-  
+  <button id="reset-btn" style="display:none;" onclick="resetGame()">🔁 Main Lagi</button>
 
-  <!-- 📜 Script data dan logika -->
+  <!-- Script -->
   <script src="data.js"></script>
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
