@@ -87,9 +87,9 @@ function startMultiplayer() {
       socket.emit("join_game");
 
       multiplayerTimeout = setTimeout(() => {
-        document.getElementById("result").textContent = "🤖 Tidak ada lawan, kembali ke bot.";
-        isMultiplayer = false;
-        startDraft();
+        document.getElementById("result").textContent = "🤖 Tidak ada lawan, silakan coba lagi.";
+        document.getElementById("start-btns").style.display = "flex";
+        setupModeButtons();
       }, 10000);
     });
 
@@ -155,43 +155,6 @@ function preloadImagesWithProgress(imageUrls, callback) {
       }
     };
     img.src = url;
-  });
-}
-
-function startMultiplayer() {
-  const loader = document.getElementById("loader-overlay");
-  loader.style.display = "flex";
-  const music = document.getElementById("bg-music");
-  const allImages = cards.map(c => c.image);
-
-  preloadImagesWithProgress(allImages, () => {
-    loader.style.display = "none";
-    music.volume = 0.2;
-    music.play().catch(() => alert("Klik dibutuhkan untuk memutar musik."));
-
-    const socket = io("https://sepuh-tcg-server.glitch.me");
-
-    document.getElementById("result").textContent = "🔌 Menghubungkan ke server...";
-
-    socket.on("connect", () => {
-      console.log("🔌 Terkoneksi ke server:", socket.id);
-      socket.emit("join_game");
-
-      setTimeout(() => {
-        document.getElementById("result").textContent = "🤖 Tidak ada lawan, kembali ke bot.";
-        isMultiplayer = false;
-        startDraft();
-      }, 10000);
-    });
-
-    socket.on("waiting", (msg) => {
-      document.getElementById("result").textContent = "🕒 " + msg;
-    });
-
-    socket.on("match_found", ({ room, players }) => {
-      document.getElementById("result").textContent = "🎮 Lawan ditemukan!";
-      startDraft(); // ganti dengan logika match multiplayer nanti
-    });
   });
 }
 
@@ -265,21 +228,6 @@ function updateHPBar(targetId, newHP) {
     bar.style.width = percent + "%";
     bar.className = `hp-bar ${hpClass}`;
   }
-}
-
-function startGame() {
-  const loader = document.getElementById("loader-overlay");
-  loader.style.display = "flex";
-  const music = document.getElementById("bg-music");
-  const allImages = cards.map(c => c.image);
-
-  preloadImagesWithProgress(allImages, () => {
-    loader.style.display = "none";
-    music.volume = 0.2;
-    music.play().catch(() => alert("Klik dibutuhkan untuk memutar musik."));
-    document.getElementById("start-btn").style.display = "none";
-    startDraft();
-  });
 }
 
 function startDraft() {
