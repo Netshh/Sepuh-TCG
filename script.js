@@ -15,6 +15,7 @@ let isMultiplayer = false;
 let socket = null;
 let opponentSocketId = null;
 let multiplayerTimeout = null;
+let isWaitingForOpponent = false;
 
 const botComments = [
   "Hyaah! Serangan maut bot!",
@@ -99,9 +100,21 @@ function startMultiplayer() {
 
     socket.on("match_found", ({ room, players }) => {
       clearTimeout(multiplayerTimeout);
-      document.getElementById("result").textContent = "🎮 Lawan ditemukan!";
+      document.getElementById("result").textContent = "🎮 Lawan ditemukan! (Mode: UI Multiplayer + Bot Logic)";
       opponentSocketId = players.find((id) => id !== socket.id);
-      startDraft();
+      
+      // Gunakan mode bot dengan UI multiplayer
+      console.log("🎮 Mode multiplayer dengan UI multiplayer, menggunakan logika bot");
+      startMultiplayerDraft();
+    });
+
+    // Fallback: jika event tidak ada, gunakan mode bot dengan multiplayer UI
+    socket.on("disconnect", () => {
+      console.log("❌ Terputus dari server");
+      if (isMultiplayer) {
+        document.getElementById("result").textContent = "❌ Koneksi terputus, menggunakan mode bot";
+        isMultiplayer = false;
+      }
     });
   });
 }
@@ -263,24 +276,68 @@ function renderDraftPool() {
 
 function onCardClick(index, cardDiv) {
   if (!isPlayerTurn || !isDrafting) return;
+  
   isPlayerTurn = false;
   const chosen = draftPool.splice(index, 1)[0];
   playerDeck.push(chosen);
   animateCardToDeck(cardDiv, 'player');
   renderDraftPool();
-  updateDraftDeckSlots();
+  
+  if (isMultiplayer) {
+    // Mode multiplayer dengan UI multiplayer, tapi menggunakan logika bot
+    isWaitingForOpponent = true;
+    updateMultiplayerDraftDeckSlots();
+    updateDraftStatus();
+    
+    // Simulasi lawan memilih kartu (menggunakan bot)
+    setTimeout(() => {
+      const randIndex = Math.floor(Math.random() * draftPool.length);
+      const botCard = document.querySelectorAll(".card")[randIndex];
+      const botChoice = draftPool.splice(randIndex, 1)[0];
+      cpuDeck.push(botChoice);
+      animateCardToDeck(botCard, 'opponent');
+      renderDraftPool();
+      updateMultiplayerDraftDeckSlots();
 
+      if (playerDeck.length + cpuDeck.length < 6) {
+        isPlayerTurn = true;
+        isWaitingForOpponent = false;
+        updateDraftStatus();
+      } else {
+        isDrafting = false;
+        updateDraftStatus();
+        showAllTeams();
+        setTimeout(() => {
+          document.getElementById("deck").style.display = "none";
+          document.getElementById("battlefield").style.display = "flex";
+          startSurvivalDuel(); // Gunakan logika bot untuk pertarungan
+        }, 2000);
+      }
+    }, 1000); // Delay lebih lama untuk simulasi lawan manusia
+  } else {
+    // Mode bot
+    updateDraftDeckSlots();
+    handleBotChoice();
+  }
+}
+
+function handleBotChoice() {
   setTimeout(() => {
     const randIndex = Math.floor(Math.random() * draftPool.length);
     const botCard = document.querySelectorAll(".card")[randIndex];
     const botChoice = draftPool.splice(randIndex, 1)[0];
     cpuDeck.push(botChoice);
-    animateCardToDeck(botCard, 'cpu');
+    animateCardToDeck(botCard, isMultiplayer ? 'opponent' : 'cpu');
     renderDraftPool();
-    updateDraftDeckSlots();
+    if (isMultiplayer) {
+      updateMultiplayerDraftDeckSlots();
+    } else {
+      updateDraftDeckSlots();
+    }
 
     if (playerDeck.length + cpuDeck.length < 6) {
       isPlayerTurn = true;
+      isWaitingForOpponent = false;
       updateDraftStatus();
     } else {
       isDrafting = false;
@@ -289,7 +346,11 @@ function onCardClick(index, cardDiv) {
       setTimeout(() => {
         document.getElementById("deck").style.display = "none";
         document.getElementById("battlefield").style.display = "flex";
-        startSurvivalDuel();
+        if (isMultiplayer) {
+          startMultiplayerBattle();
+        } else {
+          startSurvivalDuel();
+        }
       }, 2000);
     }
   }, 600);
@@ -298,7 +359,15 @@ function onCardClick(index, cardDiv) {
 function updateDraftStatus() {
   const resultBox = document.getElementById("result");
   if (isDrafting) {
-    resultBox.textContent = isPlayerTurn ? "🧍 Giliran Kamu Memilih Kartu" : "🤖 Bot sedang memilih...";
+    if (isMultiplayer) {
+      if (isWaitingForOpponent) {
+        resultBox.textContent = "⏳ Menunggu lawan memilih kartu... (Mode: UI Multiplayer + Bot Logic)";
+      } else {
+        resultBox.textContent = isPlayerTurn ? "🧍 Giliran Kamu Memilih Kartu (Mode: UI Multiplayer + Bot Logic)" : "👤 Lawan sedang memilih... (Mode: UI Multiplayer + Bot Logic)";
+      }
+    } else {
+      resultBox.textContent = isPlayerTurn ? "🧍 Giliran Kamu Memilih Kartu" : "🤖 Bot sedang memilih...";
+    }
   } else {
     resultBox.textContent = "";
   }
@@ -327,7 +396,7 @@ function animateCardToDeck(cardElement, owner) {
   const clone = cardElement.cloneNode(true);
   const rect = cardElement.getBoundingClientRect();
   const targetIndex = owner === 'player' ? playerDeck.length - 1 : cpuDeck.length - 1;
-  const targetSlot = document.getElementById(`${owner === 'player' ? 'p' : 'c'}-slot-${targetIndex}`);
+  const targetSlot = document.getElementById(`${owner === 'player' ? 'p' : owner === 'opponent' ? 'o' : 'c'}-slot-${targetIndex}`);
   if (!targetSlot) return;
   const slotRect = targetSlot.getBoundingClientRect();
   clone.style.position = 'fixed';
@@ -345,7 +414,11 @@ function animateCardToDeck(cardElement, owner) {
   });
   setTimeout(() => {
     clone.remove();
-    updateDraftDeckSlots();
+    if (isMultiplayer) {
+      updateMultiplayerDraftDeckSlots();
+    } else {
+      updateDraftDeckSlots();
+    }
   }, 700);
 }
 
@@ -358,7 +431,7 @@ function showAllTeams() {
       ${playerDeck.map(card => `<div class="card"><img src="${card.image}" alt="${card.name}" title="${card.name}" /></div>`).join('')}
     </div>
     <div class="card-section">
-      <div class="label">🤖 Bot</div>
+      <div class="label">${isMultiplayer ? '👤 Lawan' : '🤖 Bot'}</div>
       ${cpuDeck.map(card => `<div class="card"><img src="${card.image}" alt="${card.name}" title="${card.name}" /></div>`).join('')}
     </div>
   `;
@@ -497,6 +570,15 @@ function resetGame() {
   playerIndex = 0;
   cpuIndex = 0;
   isGameOver = false;
+  isWaitingForOpponent = false;
+  
+  // Disconnect socket jika dalam mode multiplayer
+  if (isMultiplayer && socket) {
+    socket.disconnect();
+    socket = null;
+    opponentSocketId = null;
+  }
+  
   document.getElementById("deck").style.display = "flex";
   document.getElementById("result").textContent = "";
   document.getElementById("reset-btn").style.display = "none";
@@ -505,7 +587,48 @@ function resetGame() {
   if (overlay) overlay.remove();
   const draftVisual = document.getElementById("draft-visual");
   if (draftVisual) draftVisual.innerHTML = "";
-  startDraft();
+  
+  // Tampilkan kembali tombol mode
+  document.getElementById("start-btns").style.display = "flex";
+  setupModeButtons();
+  
+  // Reset ke mode bot
+  isMultiplayer = false;
+}
+
+function startMultiplayerDraft() {
+  draftPool = drawDraftPool(10);
+  playerDeck = [];
+  cpuDeck = [];
+  isDrafting = true;
+  isPlayerTurn = true;
+  isWaitingForOpponent = false;
+  renderDraftPool();
+  updateMultiplayerDraftDeckSlots();
+}
+
+function updateMultiplayerDraftDeckSlots() {
+  const draftVisual = document.getElementById("draft-visual");
+  if (!draftVisual) return;
+  draftVisual.innerHTML = `
+    <div class="draft-row">
+      <h3>🧍 Kamu</h3>
+      <div class="draft-deck" id="player-draft">
+        ${[0,1,2].map(i => `<div class="deck-slot" id="p-slot-${i}">${playerDeck[i] ? `<img src="${playerDeck[i].image}" />` : ''}</div>`).join('')}
+      </div>
+    </div>
+    <div class="draft-row">
+      <h3>👤 Lawan</h3>
+      <div class="draft-deck" id="opponent-draft">
+        ${[0,1,2].map(i => `<div class="deck-slot" id="o-slot-${i}">${cpuDeck[i] ? `<img src="${cpuDeck[i].image}" />` : ''}</div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function startMultiplayerBattle() {
+  // Gunakan startSurvivalDuel sebagai gantinya
+  startSurvivalDuel();
 }
 
 window.onload = () => {
