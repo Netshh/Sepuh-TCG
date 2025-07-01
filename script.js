@@ -107,7 +107,16 @@ function startMultiplayer() {
       opponentSocketId = players.find((id) => id !== socket.id);
       console.log("👤 Opponent ID:", opponentSocketId);
       
-      // Mulai real-time multiplayer
+      if (players[0] === socket.id) {
+        isPlayerTurn = true;
+        isWaitingForOpponent = false;
+        console.log("🟢 Kamu mulai duluan (Your Turn)");
+      } else {
+        isPlayerTurn = false;
+        isWaitingForOpponent = true;
+        console.log("🔴 Lawan mulai duluan (Enemy Turn)");
+      }
+      
       startRealTimeMultiplayer(room);
     });
 
@@ -260,19 +269,13 @@ function startPollingForOpponentMoves(room) {
 
 function handleOpponentMove(move) {
   if (move.type === "card_choice" && isWaitingForOpponent) {
-    console.log("🔄 Memproses pilihan lawan dari polling:", move.cardName, "dari index:", move.cardIndex);
-    
-    // Verifikasi bahwa kartu yang dipilih sesuai dengan nama
-    if (move.cardName && draftPool[move.cardIndex] && draftPool[move.cardIndex].name === move.cardName) {
-      // Hapus kartu dari index yang benar
-      const chosenCard = draftPool.splice(move.cardIndex, 1)[0];
-      console.log("✅ Kartu berhasil dihapus dari index:", move.cardIndex, "-", chosenCard.name);
-      
+    const cardName = move.cardName;
+    const cardIndex = draftPool.findIndex(c => c.name === cardName);
+    if (cardIndex !== -1) {
+      const chosenCard = draftPool.splice(cardIndex, 1)[0];
       cpuDeck.push(chosenCard);
       renderDraftPool();
       updateMultiplayerDraftDeckSlots();
-      
-      // Cek apakah draft selesai
       if (playerDeck.length + cpuDeck.length >= 6) {
         isDrafting = false;
         updateDraftStatus();
@@ -288,38 +291,8 @@ function handleOpponentMove(move) {
         updateDraftStatus();
       }
     } else {
-      console.log("❌ Kartu tidak ditemukan di index:", move.cardIndex, "atau nama tidak sesuai");
-      console.log("📋 Pool saat ini:", draftPool.map(c => c.name));
-      console.log("🎯 Mencari kartu:", move.cardName);
-      
-      // Fallback: cari kartu berdasarkan nama
-      const cardIndex = draftPool.findIndex(c => c.name === move.cardName);
-      if (cardIndex !== -1) {
-        console.log("🔍 Kartu ditemukan di index:", cardIndex);
-        const chosenCard = draftPool.splice(cardIndex, 1)[0];
-        cpuDeck.push(chosenCard);
-        renderDraftPool();
-        updateMultiplayerDraftDeckSlots();
-        
-        // Cek apakah draft selesai
-        if (playerDeck.length + cpuDeck.length >= 6) {
-          isDrafting = false;
-          updateDraftStatus();
-          showAllTeams();
-          setTimeout(() => {
-            document.getElementById("deck").style.display = "none";
-            document.getElementById("battlefield").style.display = "flex";
-            startSurvivalDuel();
-          }, 2000);
-        } else {
-          isPlayerTurn = true;
-          isWaitingForOpponent = false;
-          updateDraftStatus();
-        }
-      } else {
-        console.log("❌ Kartu tidak ditemukan sama sekali, menggunakan fallback bot");
-        handleBotChoice();
-      }
+      console.log("❌ Kartu tidak ditemukan di pool:", cardName);
+      handleBotChoice();
     }
   }
 }
@@ -482,59 +455,35 @@ function renderDraftPool() {
 function onCardClick(index, cardDiv) {
   if (!isPlayerTurn || !isDrafting) return;
   
-  console.log("🎯 Pemain memilih kartu:", index, "-", draftPool[index].name);
+  const chosen = draftPool[index];
+  console.log("🎯 Pemain memilih kartu:", index, "-", chosen.name);
   
   isPlayerTurn = false;
-  const chosen = draftPool.splice(index, 1)[0];
-  playerDeck.push(chosen);
-  animateCardToDeck(cardDiv, 'player');
-  renderDraftPool();
+  // PATCH: Jangan splice dulu, tunggu konfirmasi lawan
+  // playerDeck.push(chosen);
+  // animateCardToDeck(cardDiv, 'player');
+  // renderDraftPool();
   
   if (isMultiplayer) {
-    // Mode multiplayer - kirim pilihan ke lawan dan tunggu respons
     isWaitingForOpponent = true;
     updateMultiplayerDraftDeckSlots();
     updateDraftStatus();
-    
-    console.log("📤 Mengirim pilihan kartu ke lawan:", chosen.name, "dari index:", index);
-    
-    // Kirim pilihan kartu ke lawan menggunakan multiple methods
+
+    // PATCH: Kirim hanya nama kartu
+    const cardChoiceData = {
+      type: "card_choice",
+      cardName: chosen.name,
+      playerId: socket.id,
+      timestamp: Date.now()
+    };
     if (socket && socket.connected) {
-      const cardChoiceData = {
-        type: "card_choice",
-        cardIndex: index, // Index asli sebelum splice
-        card: chosen,
-        playerId: socket.id,
-        timestamp: Date.now(),
-        cardName: chosen.name // Tambahkan nama kartu untuk verifikasi
-      };
-      console.log("📤 Mengirim data ke server:", cardChoiceData);
-      
-      // Method 1: Coba kirim ke room
       socket.emit("make_move", cardChoiceData);
-      
-      // Method 2: Fallback ke server broadcast
       socket.emit("card_choice", cardChoiceData);
-      
-      // Method 3: localStorage sebagai fallback
-      if (currentRoom) {
-        sendMoveToLocalStorage(currentRoom, cardChoiceData);
-      }
-    } else {
-      console.log("❌ Socket tidak terhubung, menggunakan localStorage saja");
-      if (currentRoom) {
-        const cardChoiceData = {
-          type: "card_choice",
-          cardIndex: index,
-          card: chosen,
-          playerId: socket.id,
-          timestamp: Date.now(),
-          cardName: chosen.name
-        };
-        sendMoveToLocalStorage(currentRoom, cardChoiceData);
-      }
+      if (currentRoom) sendMoveToLocalStorage(currentRoom, cardChoiceData);
+    } else if (currentRoom) {
+      sendMoveToLocalStorage(currentRoom, cardChoiceData);
     }
-    
+
     // Fallback: jika tidak ada respons dari lawan dalam 8 detik, gunakan mode bot
     const fallbackTimeout = setTimeout(() => {
       if (isWaitingForOpponent && isMultiplayer && isDrafting) {
@@ -542,98 +491,45 @@ function onCardClick(index, cardDiv) {
         handleBotChoice();
       }
     }, 8000);
-    
-    // Tambahkan event listener untuk menerima pilihan lawan
+
     socket.on("opponent_card_choice", (data) => {
       if (isMultiplayer && isDrafting && !isPlayerTurn) {
-        console.log("📥 Menerima pilihan dari lawan via socket:", data);
         clearTimeout(fallbackTimeout);
         handleOpponentCardChoice(data);
       }
     });
-    
   } else {
-    // Mode bot
     updateDraftDeckSlots();
     handleBotChoice();
   }
 }
 
 function handleOpponentCardChoice(data) {
-  const { cardIndex, card, playerId, cardName } = data;
-  
-  console.log("🔄 Memproses pilihan lawan:", cardName || card.name, "dari index:", cardIndex);
-  
-  // Pastikan ini adalah pilihan dari lawan, bukan dari diri sendiri
-  if (playerId === socket.id) {
-    console.log("❌ Mengabaikan pilihan dari diri sendiri");
-    return;
-  }
-  
-  // Verifikasi bahwa kartu yang dipilih sesuai dengan nama
-  if (cardName && draftPool[cardIndex] && draftPool[cardIndex].name === cardName) {
-    // Hapus kartu dari index yang benar
+  const { cardName, playerId } = data;
+  if (playerId === socket.id) return;
+  const cardIndex = draftPool.findIndex(c => c.name === cardName);
+  if (cardIndex !== -1) {
     const chosenCard = draftPool.splice(cardIndex, 1)[0];
-    console.log("✅ Kartu berhasil dihapus dari index:", cardIndex, "-", chosenCard.name);
-    
     cpuDeck.push(chosenCard);
     renderDraftPool();
     updateMultiplayerDraftDeckSlots();
-    
-    console.log("📊 Status draft - Player:", playerDeck.length, "Opponent:", cpuDeck.length);
-    
-    // Cek apakah draft selesai
     if (playerDeck.length + cpuDeck.length >= 6) {
-      // Draft selesai, mulai pertarungan
-      console.log("🏁 Draft selesai, memulai pertarungan");
       isDrafting = false;
       updateDraftStatus();
       showAllTeams();
       setTimeout(() => {
         document.getElementById("deck").style.display = "none";
         document.getElementById("battlefield").style.display = "flex";
-        startSurvivalDuel(); // Gunakan logika bot untuk pertarungan
+        startSurvivalDuel();
       }, 2000);
     } else {
-      // Lanjut ke ronde berikutnya
-      console.log("🔄 Lanjut ke ronde berikutnya");
       isPlayerTurn = true;
       isWaitingForOpponent = false;
       updateDraftStatus();
     }
   } else {
-    console.log("❌ Kartu tidak ditemukan di index:", cardIndex, "atau nama tidak sesuai");
-    console.log("📋 Pool saat ini:", draftPool.map(c => c.name));
-    console.log("🎯 Mencari kartu:", cardName || card.name);
-    
-    // Fallback: cari kartu berdasarkan nama
-    const cardIndexByName = draftPool.findIndex(c => c.name === (cardName || card.name));
-    if (cardIndexByName !== -1) {
-      console.log("🔍 Kartu ditemukan di index:", cardIndexByName);
-      const chosenCard = draftPool.splice(cardIndexByName, 1)[0];
-      cpuDeck.push(chosenCard);
-      renderDraftPool();
-      updateMultiplayerDraftDeckSlots();
-      
-      // Cek apakah draft selesai
-      if (playerDeck.length + cpuDeck.length >= 6) {
-        isDrafting = false;
-        updateDraftStatus();
-        showAllTeams();
-        setTimeout(() => {
-          document.getElementById("deck").style.display = "none";
-          document.getElementById("battlefield").style.display = "flex";
-          startSurvivalDuel();
-        }, 2000);
-      } else {
-        isPlayerTurn = true;
-        isWaitingForOpponent = false;
-        updateDraftStatus();
-      }
-    } else {
-      console.log("❌ Kartu tidak ditemukan sama sekali, menggunakan fallback bot");
-      handleBotChoice();
-    }
+    console.log("❌ Kartu tidak ditemukan di pool:", cardName);
+    handleBotChoice();
   }
 }
 
