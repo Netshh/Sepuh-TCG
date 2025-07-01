@@ -100,8 +100,10 @@ function startMultiplayer() {
 
     socket.on("match_found", ({ room, players }) => {
       clearTimeout(multiplayerTimeout);
+      console.log("🎮 Match found - Room:", room, "Players:", players);
       document.getElementById("result").textContent = "🎮 Lawan ditemukan! (Mode: UI Multiplayer + Bot Logic)";
       opponentSocketId = players.find((id) => id !== socket.id);
+      console.log("👤 Opponent ID:", opponentSocketId);
       
       // Gunakan mode bot dengan UI multiplayer
       console.log("🎮 Mode multiplayer dengan UI multiplayer, menggunakan logika bot");
@@ -110,8 +112,12 @@ function startMultiplayer() {
 
     // Event untuk menerima pilihan kartu lawan
     socket.on("opponent_card_choice", (data) => {
+      console.log("📥 Event opponent_card_choice diterima:", data);
       if (isMultiplayer && isDrafting && !isPlayerTurn) {
+        console.log("✅ Kondisi terpenuhi, memproses pilihan lawan");
         handleOpponentCardChoice(data);
+      } else {
+        console.log("❌ Kondisi tidak terpenuhi - isMultiplayer:", isMultiplayer, "isDrafting:", isDrafting, "!isPlayerTurn:", !isPlayerTurn);
       }
     });
 
@@ -284,6 +290,8 @@ function renderDraftPool() {
 function onCardClick(index, cardDiv) {
   if (!isPlayerTurn || !isDrafting) return;
   
+  console.log("🎯 Pemain memilih kartu:", index);
+  
   isPlayerTurn = false;
   const chosen = draftPool.splice(index, 1)[0];
   playerDeck.push(chosen);
@@ -296,26 +304,33 @@ function onCardClick(index, cardDiv) {
     updateMultiplayerDraftDeckSlots();
     updateDraftStatus();
     
+    console.log("📤 Mengirim pilihan kartu ke lawan:", chosen.name);
+    
     // Kirim pilihan kartu ke lawan
     if (socket && socket.connected) {
-      socket.emit("card_choice", {
+      const cardChoiceData = {
         cardIndex: index,
         card: chosen,
         playerId: socket.id
-      });
+      };
+      console.log("📤 Mengirim data ke server:", cardChoiceData);
+      socket.emit("card_choice", cardChoiceData);
+    } else {
+      console.log("❌ Socket tidak terhubung, tidak bisa mengirim pilihan");
     }
     
-    // Fallback: jika tidak ada respons dari lawan dalam 10 detik, gunakan mode bot
+    // Fallback: jika tidak ada respons dari lawan dalam 15 detik, gunakan mode bot
     const fallbackTimeout = setTimeout(() => {
       if (isWaitingForOpponent && isMultiplayer && isDrafting) {
-        console.log("⚠️ Tidak ada respons dari lawan, menggunakan mode bot");
+        console.log("⚠️ Tidak ada respons dari lawan dalam 15 detik, menggunakan mode bot");
         handleBotChoice();
       }
-    }, 10000);
+    }, 15000);
     
     // Tambahkan event listener untuk menerima pilihan lawan
     socket.on("opponent_card_choice", (data) => {
       if (isMultiplayer && isDrafting && !isPlayerTurn) {
+        console.log("📥 Menerima pilihan dari lawan:", data);
         clearTimeout(fallbackTimeout);
         handleOpponentCardChoice(data);
       }
@@ -331,14 +346,20 @@ function onCardClick(index, cardDiv) {
 function handleOpponentCardChoice(data) {
   const { cardIndex, card, playerId } = data;
   
+  console.log("🔄 Memproses pilihan lawan:", card.name);
+  
   // Pastikan ini adalah pilihan dari lawan, bukan dari diri sendiri
-  if (playerId === socket.id) return;
+  if (playerId === socket.id) {
+    console.log("❌ Mengabaikan pilihan dari diri sendiri");
+    return;
+  }
   
   // Hapus kartu dari pool yang tersisa
   if (draftPool.length > 0) {
     const remainingCardIndex = draftPool.findIndex(c => c.name === card.name);
     if (remainingCardIndex !== -1) {
       draftPool.splice(remainingCardIndex, 1);
+      console.log("🗑️ Menghapus kartu dari pool:", card.name);
     }
   }
   
@@ -346,9 +367,12 @@ function handleOpponentCardChoice(data) {
   renderDraftPool();
   updateMultiplayerDraftDeckSlots();
   
+  console.log("📊 Status draft - Player:", playerDeck.length, "Opponent:", cpuDeck.length);
+  
   // Cek apakah draft selesai
   if (playerDeck.length + cpuDeck.length >= 6) {
     // Draft selesai, mulai pertarungan
+    console.log("🏁 Draft selesai, memulai pertarungan");
     isDrafting = false;
     updateDraftStatus();
     showAllTeams();
@@ -359,6 +383,7 @@ function handleOpponentCardChoice(data) {
     }, 2000);
   } else {
     // Lanjut ke ronde berikutnya
+    console.log("🔄 Lanjut ke ronde berikutnya");
     isPlayerTurn = true;
     isWaitingForOpponent = false;
     updateDraftStatus();
@@ -404,6 +429,8 @@ function updateDraftStatus() {
   const resultBox = document.getElementById("result");
   const turnIndicator = document.getElementById("turn-indicator");
   
+  console.log("🔄 Update draft status - isDrafting:", isDrafting, "isPlayerTurn:", isPlayerTurn, "isWaitingForOpponent:", isWaitingForOpponent, "isMultiplayer:", isMultiplayer);
+  
   if (isDrafting) {
     if (isMultiplayer) {
       if (isWaitingForOpponent) {
@@ -417,6 +444,7 @@ function updateDraftStatus() {
           turnIndicator.style.background = "#ff6b6b";
           turnIndicator.style.color = "white";
           turnIndicator.style.animation = "pulse 2s infinite";
+          console.log("🎯 Turn indicator: ENEMY TURN");
         }
       } else {
         if (isPlayerTurn) {
@@ -430,6 +458,7 @@ function updateDraftStatus() {
             turnIndicator.style.background = "#51cf66";
             turnIndicator.style.color = "white";
             turnIndicator.style.animation = "glow 1.5s ease-in-out infinite alternate";
+            console.log("🎯 Turn indicator: YOUR TURN");
           }
         } else {
           resultBox.textContent = "⏳ LAWAN SEDANG MEMILIH KARTU... (Enemy Turn)";
@@ -442,6 +471,7 @@ function updateDraftStatus() {
             turnIndicator.style.background = "#ff6b6b";
             turnIndicator.style.color = "white";
             turnIndicator.style.animation = "pulse 2s infinite";
+            console.log("🎯 Turn indicator: ENEMY TURN");
           }
         }
       }
@@ -457,6 +487,7 @@ function updateDraftStatus() {
           turnIndicator.style.background = "#51cf66";
           turnIndicator.style.color = "white";
           turnIndicator.style.animation = "glow 1.5s ease-in-out infinite alternate";
+          console.log("🎯 Turn indicator: YOUR TURN (BOT MODE)");
         }
       } else {
         resultBox.textContent = "🤖 Bot sedang memilih...";
@@ -469,6 +500,7 @@ function updateDraftStatus() {
           turnIndicator.style.background = "#ff6b6b";
           turnIndicator.style.color = "white";
           turnIndicator.style.animation = "pulse 2s infinite";
+          console.log("🎯 Turn indicator: BOT TURN");
         }
       }
     }
@@ -483,6 +515,7 @@ function updateDraftStatus() {
       turnIndicator.style.background = "";
       turnIndicator.style.color = "";
       turnIndicator.style.animation = "";
+      console.log("🎯 Turn indicator: CLEARED");
     }
   }
 }
@@ -731,6 +764,11 @@ function startMultiplayerDraft() {
   isWaitingForOpponent = false;
   renderDraftPool();
   updateMultiplayerDraftDeckSlots();
+  
+  // Pastikan turn indicator muncul
+  updateDraftStatus();
+  
+  console.log("🎮 Mode multiplayer dimulai - menunggu input lawan");
 }
 
 function updateMultiplayerDraftDeckSlots() {
