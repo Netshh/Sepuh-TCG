@@ -108,6 +108,13 @@ function startMultiplayer() {
       startMultiplayerDraft();
     });
 
+    // Event untuk menerima pilihan kartu lawan
+    socket.on("opponent_card_choice", (data) => {
+      if (isMultiplayer && isDrafting && !isPlayerTurn) {
+        handleOpponentCardChoice(data);
+      }
+    });
+
     // Fallback: jika event tidak ada, gunakan mode bot dengan multiplayer UI
     socket.on("disconnect", () => {
       console.log("❌ Terputus dari server");
@@ -284,40 +291,77 @@ function onCardClick(index, cardDiv) {
   renderDraftPool();
   
   if (isMultiplayer) {
-    // Mode multiplayer dengan UI multiplayer, tapi menggunakan logika bot
+    // Mode multiplayer - kirim pilihan ke lawan dan tunggu respons
     isWaitingForOpponent = true;
     updateMultiplayerDraftDeckSlots();
     updateDraftStatus();
     
-    // Simulasi lawan memilih kartu (menggunakan bot)
-    setTimeout(() => {
-      const randIndex = Math.floor(Math.random() * draftPool.length);
-      const botCard = document.querySelectorAll(".card")[randIndex];
-      const botChoice = draftPool.splice(randIndex, 1)[0];
-      cpuDeck.push(botChoice);
-      animateCardToDeck(botCard, 'opponent');
-      renderDraftPool();
-      updateMultiplayerDraftDeckSlots();
-
-      if (playerDeck.length + cpuDeck.length < 6) {
-        isPlayerTurn = true;
-        isWaitingForOpponent = false;
-        updateDraftStatus();
-      } else {
-        isDrafting = false;
-        updateDraftStatus();
-        showAllTeams();
-        setTimeout(() => {
-          document.getElementById("deck").style.display = "none";
-          document.getElementById("battlefield").style.display = "flex";
-          startSurvivalDuel(); // Gunakan logika bot untuk pertarungan
-        }, 2000);
+    // Kirim pilihan kartu ke lawan
+    if (socket && socket.connected) {
+      socket.emit("card_choice", {
+        cardIndex: index,
+        card: chosen,
+        playerId: socket.id
+      });
+    }
+    
+    // Fallback: jika tidak ada respons dari lawan dalam 10 detik, gunakan mode bot
+    const fallbackTimeout = setTimeout(() => {
+      if (isWaitingForOpponent && isMultiplayer && isDrafting) {
+        console.log("⚠️ Tidak ada respons dari lawan, menggunakan mode bot");
+        handleBotChoice();
       }
-    }, 1000); // Delay lebih lama untuk simulasi lawan manusia
+    }, 10000);
+    
+    // Tambahkan event listener untuk menerima pilihan lawan
+    socket.on("opponent_card_choice", (data) => {
+      if (isMultiplayer && isDrafting && !isPlayerTurn) {
+        clearTimeout(fallbackTimeout);
+        handleOpponentCardChoice(data);
+      }
+    });
+    
   } else {
     // Mode bot
     updateDraftDeckSlots();
     handleBotChoice();
+  }
+}
+
+function handleOpponentCardChoice(data) {
+  const { cardIndex, card, playerId } = data;
+  
+  // Pastikan ini adalah pilihan dari lawan, bukan dari diri sendiri
+  if (playerId === socket.id) return;
+  
+  // Hapus kartu dari pool yang tersisa
+  if (draftPool.length > 0) {
+    const remainingCardIndex = draftPool.findIndex(c => c.name === card.name);
+    if (remainingCardIndex !== -1) {
+      draftPool.splice(remainingCardIndex, 1);
+    }
+  }
+  
+  cpuDeck.push(card);
+  renderDraftPool();
+  updateMultiplayerDraftDeckSlots();
+  
+  // Cek apakah draft selesai
+  if (playerDeck.length + cpuDeck.length >= 6) {
+    // Draft selesai, mulai pertarungan
+    isDrafting = false;
+    updateDraftStatus();
+    showAllTeams();
+    setTimeout(() => {
+      document.getElementById("deck").style.display = "none";
+      document.getElementById("battlefield").style.display = "flex";
+      startSurvivalDuel(); // Gunakan logika bot untuk pertarungan
+    }, 2000);
+  } else {
+    // Lanjut ke ronde berikutnya
+    isPlayerTurn = true;
+    isWaitingForOpponent = false;
+    updateDraftStatus();
   }
 }
 
@@ -358,18 +402,88 @@ function handleBotChoice() {
 
 function updateDraftStatus() {
   const resultBox = document.getElementById("result");
+  const turnIndicator = document.getElementById("turn-indicator");
+  
   if (isDrafting) {
     if (isMultiplayer) {
       if (isWaitingForOpponent) {
-        resultBox.textContent = "⏳ Menunggu lawan memilih kartu... (Mode: UI Multiplayer + Bot Logic)";
+        resultBox.textContent = "⏳ MENUNGGU LAWAN MEMILIH KARTU... (Giliran Lawan)";
+        resultBox.style.color = "#ff6b6b";
+        resultBox.style.fontWeight = "bold";
+        
+        // Update turn indicator dengan animasi
+        if (turnIndicator) {
+          turnIndicator.textContent = "⏳ ENEMY TURN - Menunggu lawan memilih kartu...";
+          turnIndicator.style.background = "#ff6b6b";
+          turnIndicator.style.color = "white";
+          turnIndicator.style.animation = "pulse 2s infinite";
+        }
       } else {
-        resultBox.textContent = isPlayerTurn ? "🧍 Giliran Kamu Memilih Kartu (Mode: UI Multiplayer + Bot Logic)" : "👤 Lawan sedang memilih... (Mode: UI Multiplayer + Bot Logic)";
+        if (isPlayerTurn) {
+          resultBox.textContent = "🎯 GILIRAN KAMU MEMILIH KARTU! (Your Turn)";
+          resultBox.style.color = "#51cf66";
+          resultBox.style.fontWeight = "bold";
+          
+          // Update turn indicator dengan animasi
+          if (turnIndicator) {
+            turnIndicator.textContent = "🎯 YOUR TURN - Pilih kartu sekarang!";
+            turnIndicator.style.background = "#51cf66";
+            turnIndicator.style.color = "white";
+            turnIndicator.style.animation = "glow 1.5s ease-in-out infinite alternate";
+          }
+        } else {
+          resultBox.textContent = "⏳ LAWAN SEDANG MEMILIH KARTU... (Enemy Turn)";
+          resultBox.style.color = "#ff6b6b";
+          resultBox.style.fontWeight = "bold";
+          
+          // Update turn indicator dengan animasi
+          if (turnIndicator) {
+            turnIndicator.textContent = "⏳ ENEMY TURN - Lawan sedang memilih kartu...";
+            turnIndicator.style.background = "#ff6b6b";
+            turnIndicator.style.color = "white";
+            turnIndicator.style.animation = "pulse 2s infinite";
+          }
+        }
       }
     } else {
-      resultBox.textContent = isPlayerTurn ? "🧍 Giliran Kamu Memilih Kartu" : "🤖 Bot sedang memilih...";
+      if (isPlayerTurn) {
+        resultBox.textContent = "🎯 GILIRAN KAMU MEMILIH KARTU! (Your Turn)";
+        resultBox.style.color = "#51cf66";
+        resultBox.style.fontWeight = "bold";
+        
+        // Update turn indicator dengan animasi
+        if (turnIndicator) {
+          turnIndicator.textContent = "🎯 YOUR TURN - Pilih kartu sekarang!";
+          turnIndicator.style.background = "#51cf66";
+          turnIndicator.style.color = "white";
+          turnIndicator.style.animation = "glow 1.5s ease-in-out infinite alternate";
+        }
+      } else {
+        resultBox.textContent = "🤖 Bot sedang memilih...";
+        resultBox.style.color = "#ff6b6b";
+        resultBox.style.fontWeight = "bold";
+        
+        // Update turn indicator dengan animasi
+        if (turnIndicator) {
+          turnIndicator.textContent = "🤖 BOT TURN - Bot sedang memilih kartu...";
+          turnIndicator.style.background = "#ff6b6b";
+          turnIndicator.style.color = "white";
+          turnIndicator.style.animation = "pulse 2s infinite";
+        }
+      }
     }
   } else {
     resultBox.textContent = "";
+    resultBox.style.color = "";
+    resultBox.style.fontWeight = "";
+    
+    // Clear turn indicator
+    if (turnIndicator) {
+      turnIndicator.textContent = "";
+      turnIndicator.style.background = "";
+      turnIndicator.style.color = "";
+      turnIndicator.style.animation = "";
+    }
   }
 }
 
@@ -581,8 +695,20 @@ function resetGame() {
   
   document.getElementById("deck").style.display = "flex";
   document.getElementById("result").textContent = "";
+  document.getElementById("result").style.color = "";
+  document.getElementById("result").style.fontWeight = "";
   document.getElementById("reset-btn").style.display = "none";
   document.getElementById("battlefield").style.display = "none";
+  
+  // Clear turn indicator
+  const turnIndicator = document.getElementById("turn-indicator");
+  if (turnIndicator) {
+    turnIndicator.textContent = "";
+    turnIndicator.style.background = "";
+    turnIndicator.style.color = "";
+    turnIndicator.style.animation = "";
+  }
+  
   const overlay = document.getElementById("card-preview-overlay");
   if (overlay) overlay.remove();
   const draftVisual = document.getElementById("draft-visual");
