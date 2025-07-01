@@ -16,6 +16,8 @@ let socket = null;
 let opponentSocketId = null;
 let multiplayerTimeout = null;
 let isWaitingForOpponent = false;
+let currentRoom = null;
+let lastProcessedMove = 0;
 
 const botComments = [
   "Hyaah! Serangan maut bot!",
@@ -101,13 +103,12 @@ function startMultiplayer() {
     socket.on("match_found", ({ room, players }) => {
       clearTimeout(multiplayerTimeout);
       console.log("🎮 Match found - Room:", room, "Players:", players);
-      document.getElementById("result").textContent = "🎮 Lawan ditemukan! (Mode: UI Multiplayer + Bot Logic)";
+      document.getElementById("result").textContent = "🎮 Lawan ditemukan! Real-time PvP Mode";
       opponentSocketId = players.find((id) => id !== socket.id);
       console.log("👤 Opponent ID:", opponentSocketId);
       
-      // Gunakan mode bot dengan UI multiplayer
-      console.log("🎮 Mode multiplayer dengan UI multiplayer, menggunakan logika bot");
-      startMultiplayerDraft();
+      // Mulai real-time multiplayer
+      startRealTimeMultiplayer(room);
     });
 
     // Event untuk menerima pilihan kartu lawan
@@ -130,6 +131,123 @@ function startMultiplayer() {
       }
     });
   });
+}
+
+function startRealTimeMultiplayer(room) {
+  console.log("🎮 Memulai real-time multiplayer di room:", room);
+  
+  // Simpan room ID
+  currentRoom = room;
+  
+  // Setup room-based communication
+  socket.emit("join_room", { room: room, playerId: socket.id });
+  
+  // Setup localStorage-based communication sebagai fallback
+  setupLocalStorageCommunication(room);
+  
+  // Start polling untuk update dari lawan
+  startPollingForOpponentMoves(room);
+  
+  // Mulai draft
+  startMultiplayerDraft();
+}
+
+function setupLocalStorageCommunication(room) {
+  // Poll localStorage setiap 500ms untuk update dari lawan
+  const localStorageInterval = setInterval(() => {
+    if (!isMultiplayer || !isDrafting) {
+      clearInterval(localStorageInterval);
+      return;
+    }
+    
+    try {
+      const roomData = localStorage.getItem(`sepuh_tcg_room_${room}`);
+      if (roomData) {
+        const data = JSON.parse(roomData);
+        
+        // Cek apakah ada move baru dari lawan
+        if (data.lastMove && data.lastMove.playerId !== socket.id && data.lastMove.timestamp > (lastProcessedMove || 0)) {
+          console.log("📥 Menerima move dari localStorage:", data.lastMove);
+          lastProcessedMove = data.lastMove.timestamp;
+          handleOpponentMove(data.lastMove);
+        }
+      }
+    } catch (error) {
+      console.log("❌ Error membaca localStorage:", error);
+    }
+  }, 500);
+  
+  // Simpan interval untuk cleanup
+  window.localStorageInterval = localStorageInterval;
+}
+
+function sendMoveToLocalStorage(room, moveData) {
+  try {
+    const roomData = {
+      room: room,
+      lastMove: moveData,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(`sepuh_tcg_room_${room}`, JSON.stringify(roomData));
+    console.log("💾 Move disimpan ke localStorage:", moveData);
+  } catch (error) {
+    console.log("❌ Error menyimpan ke localStorage:", error);
+  }
+}
+
+function startPollingForOpponentMoves(room) {
+  // Poll setiap 1 detik untuk update dari lawan
+  const pollInterval = setInterval(() => {
+    if (!isMultiplayer || !isDrafting) {
+      clearInterval(pollInterval);
+      return;
+    }
+    
+    // Cek apakah ada update dari lawan
+    socket.emit("get_room_state", { room: room });
+  }, 1000);
+  
+  // Listen untuk room state updates
+  socket.on("room_state_update", (data) => {
+    if (data.room === room && data.lastMove && data.lastMove.playerId !== socket.id) {
+      console.log("📥 Menerima update dari lawan:", data.lastMove);
+      handleOpponentMove(data.lastMove);
+    }
+  });
+}
+
+function handleOpponentMove(move) {
+  if (move.type === "card_choice" && isWaitingForOpponent) {
+    console.log("🔄 Memproses pilihan lawan dari polling:", move.card.name);
+    
+    // Hapus kartu dari pool
+    if (draftPool.length > 0) {
+      const remainingCardIndex = draftPool.findIndex(c => c.name === move.card.name);
+      if (remainingCardIndex !== -1) {
+        draftPool.splice(remainingCardIndex, 1);
+      }
+    }
+    
+    cpuDeck.push(move.card);
+    renderDraftPool();
+    updateMultiplayerDraftDeckSlots();
+    
+    // Cek apakah draft selesai
+    if (playerDeck.length + cpuDeck.length >= 6) {
+      isDrafting = false;
+      updateDraftStatus();
+      showAllTeams();
+      setTimeout(() => {
+        document.getElementById("deck").style.display = "none";
+        document.getElementById("battlefield").style.display = "flex";
+        startSurvivalDuel();
+      }, 2000);
+    } else {
+      isPlayerTurn = true;
+      isWaitingForOpponent = false;
+      updateDraftStatus();
+    }
+  }
 }
 
 // Loader overlay hide after load
@@ -306,31 +424,53 @@ function onCardClick(index, cardDiv) {
     
     console.log("📤 Mengirim pilihan kartu ke lawan:", chosen.name);
     
-    // Kirim pilihan kartu ke lawan
+    // Kirim pilihan kartu ke lawan menggunakan multiple methods
     if (socket && socket.connected) {
       const cardChoiceData = {
+        type: "card_choice",
         cardIndex: index,
         card: chosen,
-        playerId: socket.id
+        playerId: socket.id,
+        timestamp: Date.now()
       };
       console.log("📤 Mengirim data ke server:", cardChoiceData);
+      
+      // Method 1: Coba kirim ke room
+      socket.emit("make_move", cardChoiceData);
+      
+      // Method 2: Fallback ke server broadcast
       socket.emit("card_choice", cardChoiceData);
+      
+      // Method 3: localStorage sebagai fallback
+      if (currentRoom) {
+        sendMoveToLocalStorage(currentRoom, cardChoiceData);
+      }
     } else {
-      console.log("❌ Socket tidak terhubung, tidak bisa mengirim pilihan");
+      console.log("❌ Socket tidak terhubung, menggunakan localStorage saja");
+      if (currentRoom) {
+        const cardChoiceData = {
+          type: "card_choice",
+          cardIndex: index,
+          card: chosen,
+          playerId: socket.id,
+          timestamp: Date.now()
+        };
+        sendMoveToLocalStorage(currentRoom, cardChoiceData);
+      }
     }
     
-    // Fallback: jika tidak ada respons dari lawan dalam 15 detik, gunakan mode bot
+    // Fallback: jika tidak ada respons dari lawan dalam 8 detik, gunakan mode bot
     const fallbackTimeout = setTimeout(() => {
       if (isWaitingForOpponent && isMultiplayer && isDrafting) {
-        console.log("⚠️ Tidak ada respons dari lawan dalam 15 detik, menggunakan mode bot");
+        console.log("⚠️ Tidak ada respons dari lawan dalam 8 detik, menggunakan mode bot");
         handleBotChoice();
       }
-    }, 15000);
+    }, 8000);
     
     // Tambahkan event listener untuk menerima pilihan lawan
     socket.on("opponent_card_choice", (data) => {
       if (isMultiplayer && isDrafting && !isPlayerTurn) {
-        console.log("📥 Menerima pilihan dari lawan:", data);
+        console.log("📥 Menerima pilihan dari lawan via socket:", data);
         clearTimeout(fallbackTimeout);
         handleOpponentCardChoice(data);
       }
@@ -725,6 +865,16 @@ function resetGame() {
     socket = null;
     opponentSocketId = null;
   }
+  
+  // Cleanup localStorage interval
+  if (window.localStorageInterval) {
+    clearInterval(window.localStorageInterval);
+    window.localStorageInterval = null;
+  }
+  
+  // Reset room variables
+  currentRoom = null;
+  lastProcessedMove = 0;
   
   document.getElementById("deck").style.display = "flex";
   document.getElementById("result").textContent = "";
